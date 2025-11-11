@@ -26,6 +26,29 @@ class REDCap:
         self.base_url = 'https://redcap.usher.ed.ac.uk/api/'
         self.report_id = properties.report_id
         self.properties = properties
+        self.api_access = self.has_api_access()
+
+    def has_api_access(self) -> bool:
+        """
+        Check if the REDCap API is accessible with the provided token.
+
+        Args:
+            None
+        Returns:
+            bool: True if API access is successful, False otherwise.
+        """
+        data = {
+            'token': self.token,
+            'content': 'project',
+            'format': 'json',
+            'returnFormat': 'json'
+        }
+        r = requests.post(self.base_url, data=data)
+        if r.status_code != 200:
+            self._logger.error(f"Failed to access REDCap API: {r.text}")
+            return False
+        self._logger.info('Successfully accessed REDCap API.')
+        return True
 
     def get_questionnaire_variables(self):
         """
@@ -42,17 +65,6 @@ class REDCap:
             'content': 'metadata',
             'format': 'csv',
             'returnFormat': 'json',
-            'forms[0]': 'participant_information',
-            'forms[1]': 'screening',
-            'forms[2]': 'baseline_researcher_cb',
-            'forms[3]': 'baseline_participant_questionnaire',
-            'forms[4]': 'postbaseline_researcher_admin',
-            'forms[5]': 'm_followup_researcher_questionnaire',
-            'forms[6]': 'm_followup_participant_questionnaire',
-            'forms[7]': 'm_followup_researcher_questionnaire_e70e',
-            'forms[8]': 'm_followup_participant_questionnaire_6517',
-            'forms[9]': 'm_followup_researcher_questionnaire_df3a',
-            'forms[10]': 'm_followup_participant_questionnaire_13e1'
         }
         r = requests.post(self.base_url, data=data)
         if r.status_code != 200:
