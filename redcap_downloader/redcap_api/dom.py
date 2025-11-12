@@ -19,7 +19,7 @@ class DataMixin:
     def __init__(self):
         self._logger = logging.getLogger(self.__class__.__name__)
 
-    def split(self, by: list[str]) -> list[pd.DataFrame]:
+    def split(self, by: list[str] | str) -> list[pd.DataFrame]:
         """Split the DataFrame into a list of DataFrames based on the specified columns.
 
         Args:
@@ -46,15 +46,19 @@ class Report(DataMixin):
         super().__init__()
         self.data = report_data
         self.raw_data = report_data
-        self._logger.info(f'Initialised report for {len(self.data.study_id.unique())} subjects.')
+        self.data_type = self.get_data_type()
+        self.subject_list = self.get_subjects()
+        self.grouper = 'redcap_event_name' if self.data_type == 'questionnaire' else 'redcap_repeat_instrument'
+
+        self._logger.info(f'Initialised report for {len(self.subject_list)} subjects.')
         self._logger.info(f'Number of questionnaires: \
-                          {self.data.groupby("redcap_event_name").size().sort_values(ascending=False)}')
-        self._logger.debug(f'Subject list: {self.data.study_id.unique()}')
+                          {self.data.groupby(self.grouper).size().sort_values(ascending=False)}')
+        self._logger.debug(f'Subject list: {self.subject_list}')
 
     def __str__(self):
         return f"Report with {self.data.shape[0]} entries and {self.data.shape[1]} columns"
 
-    def save_cleaned_data(self, paths: PathResolver, by: list[str] = None, remove_empty_columns: bool = True):
+    def save_cleaned_data(self, paths: PathResolver, by: list[str] | str = None, remove_empty_columns: bool = True):
         """
         Save cleaned questionnaire report data after splitting it by the specified columns.
 
@@ -73,6 +77,7 @@ class Report(DataMixin):
         for df in df_list:
             self._logger.debug(f'Saving report with shape: {df.shape}')
             file_path = paths.get_subject_questionnaire(subject_id=df.participant_id.iloc[0],
+                                                        data_type='EMA_' if self.data_type == 'ema' else '',
                                                         event_name=df.output_form.iloc[0])
             df.drop(columns=['output_form']).to_csv(file_path, index=False)
             self._logger.debug(f'Saved cleaned report data to {file_path}')
@@ -91,6 +96,41 @@ class Report(DataMixin):
         self.raw_data.to_csv(paths.get_raw_report_file(), index=False)
         self._logger.info(f'Saved raw data to {paths.get_raw_report_file()}')
 
+    def get_data_type(self) -> str:
+        """
+        Determine the data type of the report based on the column names.
+
+        Args:
+            None
+
+        Returns:
+            str: The data type ('questionnaire' or 'ema').
+        """
+        if 'study_id' in self.data.columns and 'redcap_event_name' in self.data.columns:
+            return 'questionnaire'
+        elif 'field_record_id' in self.data.columns and 'redcap_repeat_instrument' in self.data.columns:
+            return 'ema'
+        else:
+            raise ValueError('Unknown report data type.')
+
+    def get_subjects(self) -> list[str]:
+        """
+        Get the list of unique subject identifiers in the report.
+
+        Args:
+            None
+
+        Returns:
+            list[str]: List of unique subject identifiers.
+        """
+        if self.data_type == 'questionnaire':
+            return self.data['study_id'].unique().astype('int').tolist()
+        elif self.data_type == 'ema':
+            subject_ids = self.data['field_7uslb44zkd7bybb6'].dropna().unique().astype('int').tolist()
+            return [f"ABD{sid:03d}" for sid in subject_ids]
+        else:
+            raise ValueError('Unknown report data type.')
+
 
 class Variables(DataMixin):
     """
@@ -107,6 +147,8 @@ class Variables(DataMixin):
         super().__init__()
         self.raw_data = variables_data
         self.data = variables_data
+        self.data_type = self.get_data_type()
+
         self._logger.info(f'Initialised list of {len(self.data)} variables.')
 
     def __str__(self):
@@ -147,3 +189,21 @@ class Variables(DataMixin):
         """
         self.raw_data.to_csv(paths.get_raw_variables_file(), index=False)
         self._logger.info(f'Saved raw data to {paths.get_raw_variables_file()}')
+
+    def get_data_type(self) -> str:
+        """
+        Determine the data type of the variables based on the variable names.
+
+        Args:
+            None
+
+        Returns:
+            str: The data type ('questionnaire' or 'ema').
+        """
+        self._logger.debug(f'Variable field names: {self.data.field_name.tolist()}')
+        if 'study_id' in self.data.field_name.values and 'participant_id' in self.data.field_name.values:
+            return 'questionnaire'
+        elif 'field_record_id' in self.data.field_name.values:
+            return 'ema'
+        else:
+            raise ValueError('Unknown variables data type.')

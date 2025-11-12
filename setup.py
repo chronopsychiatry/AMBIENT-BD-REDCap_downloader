@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name='redcap_downloader',
-    version='0.0.1',
+    version='0.1.0',
     description='Download, clean-up and organise data from REDCap',
     long_description_content_type="text/markdown",
     url='https://github.com/chronopsychiatry/REDCap_downloader',
@@ -15,6 +15,7 @@ setup(
     entry_points={
         'console_scripts': [
             'redcap_download=redcap_downloader:main.main',
+            'redcap_generate_config=redcap_downloader.generate_config:generate_config'
         ],
     },
 )

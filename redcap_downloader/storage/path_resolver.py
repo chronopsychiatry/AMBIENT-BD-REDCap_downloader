@@ -82,5 +82,5 @@ class PathResolver:
     def get_variables_file(self, form_name: str) -> Path:
         return self.get_meta_dir() / f'{form_name}_variables_{self.timestamp}.csv'
 
-    def get_subject_questionnaire(self, subject_id: str, event_name: str) -> Path:
-        return self.get_subject_dir(subject_id) / f'{subject_id}_PROM-{event_name}_{self.timestamp}.csv'
+    def get_subject_questionnaire(self, subject_id: str, data_type: str, event_name: str) -> Path:
+        return self.get_subject_dir(subject_id) / f'{subject_id}_PROM-{data_type}{event_name}_{self.timestamp}.csv'

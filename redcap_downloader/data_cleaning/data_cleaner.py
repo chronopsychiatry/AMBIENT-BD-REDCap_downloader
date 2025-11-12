@@ -6,7 +6,7 @@ import pandas as pd
 from ..redcap_api.redcap import REDCap, Variables, Report
 from ..storage.path_resolver import PathResolver
 from .helpers import replace_strings, merge_duplicate_columns
-from .replacements import FORM_NAME_REPLACEMENTS, FIELD_NAME_REPLACEMENTS, ARM_NAME_REPLACEMENTS
+from .replacements import FORM_NAME_REPLACEMENTS, FIELD_NAME_REPLACEMENTS
 
 
 class DataCleaner:
@@ -41,7 +41,7 @@ class DataCleaner:
         variables.save_raw_data(paths=self.paths)
 
         variables = self.clean_variables(variables)
-        variables.save_cleaned_data(paths=self.paths, by='output_form', remove_empty_columns=True)
+        variables.save_cleaned_data(paths=self.paths, by=['output_form'], remove_empty_columns=True)
         self._logger.info(f'Saved cleaned questionnaire variables to {self.paths.get_meta_dir()}.')
 
     def save_questionnaire_reports(self):
@@ -76,7 +76,7 @@ class DataCleaner:
                        .query('form_name != "participant_information"')
                        .pipe(self.remove_html_tags)
                        .pipe(self.filter_variables_columns)
-                       .pipe(self.clean_variables_form_names)
+                       .pipe(self.clean_variables_form_names, data_type=variables.data_type)
                        )
         variables.data = cleaned_var
         return variables
@@ -93,45 +93,57 @@ class DataCleaner:
         """
         cleaned_reports = (reports
                            .data
-                           .pipe(self.clean_reports_form_names)
-                           .query('redcap_event_name != "initial_contact"')
+                           .pipe(self.clean_reports_form_names, data_type=reports.data_type)
                            )
-        reports.data = cleaned_reports
+        if reports.data_type == 'questionnaire':
+            cleaned_reports = cleaned_reports.query('redcap_event_name != "initial_contact"')
+        elif reports.data_type == 'ema':
+            reports.data = (
+                cleaned_reports
+                .assign(
+                    participant_id=lambda df: df['participant_id'].ffill().astype('int').apply(lambda x: f"ABD{x:03d}")
+                ))
         return reports
 
-    def clean_variables_form_names(self, df: pd.DataFrame) -> pd.DataFrame:
+    def clean_variables_form_names(self, df: pd.DataFrame, data_type: str) -> pd.DataFrame:
         """
         Replace form names by human-readable names and merge researcher and participant forms.
 
         Args:
             df (pd.DataFrame): DataFrame containing variable data.
+            data_type (str): The type of data ('questionnaire' or 'ema').
 
         Returns:
             pd.DataFrame: DataFrame with cleaned form names.
         """
-        return (df
-                .assign(
-                    form_name=lambda df: replace_strings(df.form_name, FORM_NAME_REPLACEMENTS),
-                    field_name=lambda df: replace_strings(df.field_name, FIELD_NAME_REPLACEMENTS),
-                    output_form=lambda df: np.where(df.form_name == 'Screening', 'Scre', 'Ques')
-                )
-                .pipe(merge_duplicate_columns)
-                )
+        df = (df
+              .assign(
+                      form_name=lambda df: replace_strings(df.form_name, FORM_NAME_REPLACEMENTS),
+                      field_name=lambda df: replace_strings(df.field_name, FIELD_NAME_REPLACEMENTS)
+                      ))
+        if data_type == 'questionnaire':
+            df = df.assign(output_form=lambda df: np.where(df.form_name == 'Screening', 'Scre', 'Ques'))
+        elif data_type == 'ema':
+            df = df.assign(output_form=lambda df: df.form_name)
+        return (df.pipe(merge_duplicate_columns))
 
-    def clean_reports_form_names(self, df: pd.DataFrame) -> pd.DataFrame:
+    def clean_reports_form_names(self, df: pd.DataFrame, data_type: str) -> pd.DataFrame:
         """
         Clean-up the form and column names of the reports DataFrame.
 
         Args:
             df (pd.DataFrame): DataFrame containing report data.
+            data_type (str): The type of data ('questionnaire' or 'ema').
 
         Returns:
             pd.DataFrame: DataFrame with cleaned form and column names.
         """
+        if data_type == 'questionnaire':
+            df = (df
+                  .assign(redcap_event_name=lambda df: replace_strings(df.redcap_event_name, {'_arm_1': ''}),
+                          output_form=lambda df: np.where(df.redcap_event_name == 'screening', 'Scre', 'Ques')
+                          ))
         return (df
-                .assign(redcap_event_name=lambda df: replace_strings(df.redcap_event_name, ARM_NAME_REPLACEMENTS),
-                        output_form=lambda df: np.where(df.redcap_event_name == 'screening', 'Scre', 'Ques')
-                        )
                 .rename(columns=lambda df: (
                     reduce(lambda s, kv: s.replace(kv[0], kv[1]), FIELD_NAME_REPLACEMENTS.items(), df)
                 ))
