@@ -10,7 +10,6 @@ from .data_cleaning.data_cleaner import DataCleaner
 
 
 def main():
-    # Load properties
     properties = load_application_properties()
 
     # Configure the logger

@@ -96,7 +96,7 @@ class DataCleaner:
                            .pipe(self.clean_reports_form_names, data_type=reports.data_type)
                            )
         if reports.data_type == 'questionnaire':
-            cleaned_reports = cleaned_reports.query('redcap_event_name != "initial_contact"')
+            reports.data = cleaned_reports.query('redcap_event_name != "initial_contact"')
         elif reports.data_type == 'ema':
             reports.data = (
                 cleaned_reports

@@ -17,6 +17,7 @@ class DataMixin:
         split(by): Splits the DataFrame into a list of DataFrames based on the specified columns.
     """
     def __init__(self):
+        self.data = pd.DataFrame()
         self._logger = logging.getLogger(self.__class__.__name__)
 
     def split(self, by: list[str] | str) -> list[pd.DataFrame]:
@@ -58,7 +59,7 @@ class Report(DataMixin):
     def __str__(self):
         return f"Report with {self.data.shape[0]} entries and {self.data.shape[1]} columns"
 
-    def save_cleaned_data(self, paths: PathResolver, by: list[str] | str = None, remove_empty_columns: bool = True):
+    def save_cleaned_data(self, paths: PathResolver, by: list[str] | str = '', remove_empty_columns: bool = True):
         """
         Save cleaned questionnaire report data after splitting it by the specified columns.
 
@@ -70,7 +71,7 @@ class Report(DataMixin):
         Returns:
             None
         """
-        df_list = [self.data] if by is None else self.split(by)
+        df_list = [self.data] if by == '' else self.split(by)
         if remove_empty_columns:
             df_list = [drop_empty_columns(df) for df in df_list]
 
@@ -124,7 +125,7 @@ class Report(DataMixin):
             list[str]: List of unique subject identifiers.
         """
         if self.data_type == 'questionnaire':
-            return self.data['study_id'].unique().astype('int').tolist()
+            return self.data['study_id'].unique().tolist()
         elif self.data_type == 'ema':
             subject_ids = self.data['field_7uslb44zkd7bybb6'].dropna().unique().astype('int').tolist()
             return [f"ABD{sid:03d}" for sid in subject_ids]
@@ -154,19 +155,19 @@ class Variables(DataMixin):
     def __str__(self):
         return f"Variables with {self.raw_data.shape[0]} entries"
 
-    def save_cleaned_data(self, paths: PathResolver, by: list[str] = None, remove_empty_columns: bool = True):
+    def save_cleaned_data(self, paths: PathResolver, by: list[str] | str = '', remove_empty_columns: bool = True):
         """
         Save cleaned variables data.
 
         Args:
             paths (PathResolver): PathResolver instance to get the save paths.
-            by (list): List of columns to split the DataFrame by.
+            by (list or str): List of columns to split the DataFrame by.
             remove_empty_columns (bool): Whether to remove empty columns before saving.
 
         Returns:
             None
         """
-        df_list = [self.data] if by is None else self.split(by)
+        df_list = [self.data] if by == '' else self.split(by)
         if remove_empty_columns:
             df_list = [drop_empty_columns(df) for df in df_list]
 
