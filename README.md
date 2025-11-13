@@ -4,19 +4,15 @@ Python script to download, clean-up and organise data from REDCap
 
 ## Running the downloader
 
-The package is not uploaded on PyPI for the moment, so it must be installed from source. To do so:
+The package can be installed from PyPI with the command: `pip install redcap_downloader`
 
-- Clone the github repository
-- In a terminal, navigate to the repository
-- Install the package with pip: `python pip install .`
+Accessing REDCap data requires having an API token. This must be requested through the REDCap platform, and stored in a .txt file.
 
-Accessing REDCap data requires having an API token. This must be requested through the REDCap platform, and stored in a .txt file on a computer. **Do not** store the token in the cloned github repository, to avoid accidental upload.
-
-Edit the "REDCap_downloader.properties" file (in the cloned repository):
+Create the "REDCap_downloader.properties" file with the command `redcap_generate_config`. The config file will contain the following fields:
 
 - `token-file`: the path to the text file containing your REDCap API token
 - `download-dir`: path to the directory where the REDCap data will be downloaded
-- `report-id`: ID of the report to download. For Ambient-BD questionnaire data, use 159
+- `report-id`: ID of the report to download. For Ambient-BD questionnaire data, use 159, for EMA data use 190
 - `log-level`: set to INFO by default. Change to DEBUG if you have an issue with the downloader and want more info on what is happening
 
 Finally, run the following command from the directory that contains the properties file:
@@ -52,12 +48,13 @@ All file names contain the date at which the downloader was run (20250716 in thi
 
 - `download.log`: contains a log of the program run
 - `meta`: questionnaire metadata. Contains one .csv file per questionnaire. Each .csv file contains a list of all variables in the questionnaire (as found in the reports), along with a description
-- `raw`: raw data as obtained from REDCap, without any cleaning done. There are two file:
+- `raw`: raw data as obtained from REDCap, without any cleaning done. There are two files:
   - `Report_raw.csv`: questionnaire results for all participants, and all questionnaires
   - `Variables_raw.csv`: list of variables for all questionnaires
 - `reports`: cleaned-up questionnaire data, split by participant and questionnaire type
   - `PROM-Scre`: contains only the screening questionnaire
   - `PROM-Ques`: contains the baseline questionnaire, as well as the 6-, 12- and 18-months follow-up questionnaires
+  - `PROM-EMA`: contains EMA data
 
 ## Ambient-BD questionnaires
 
