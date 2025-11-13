@@ -73,7 +73,7 @@ class TestPathsResolver():
             / subject_id
             / f'{subject_id}_PROM-{event_name}_{self.resolver.timestamp}.csv'
         )
-        assert self.resolver.get_subject_questionnaire(subject_id, event_name) == expected_path
+        assert self.resolver.get_subject_questionnaire(subject_id, data_type='', event_name=event_name) == expected_path
         assert not expected_path.exists()
 
     def test_tearDown(self):

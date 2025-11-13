@@ -49,7 +49,7 @@ class TestDataCleaner:
     def test_save_questionnaire_reports(self):
         self.cleaner.save_questionnaire_reports()
 
-        expected_path = self.paths.get_subject_questionnaire(subject_id='abd001', event_name='Ques')
+        expected_path = self.paths.get_subject_questionnaire(subject_id='ABD001', data_type='', event_name='Ques')
         assert os.path.exists(expected_path)
 
         subject1_report = pd.read_csv(expected_path)
@@ -73,7 +73,7 @@ class TestDataCleaner:
         assert not reports.data['consent_contact'].isna().all()
 
     def test_clean_variables_form_names(self):
-        cleaned_df = self.cleaner.clean_variables_form_names(self.test_variables)
+        cleaned_df = self.cleaner.clean_variables_form_names(self.test_variables, data_type='questionnaire')
 
         assert 'baseline_researcher_cb' not in cleaned_df['form_name'].values
         assert 'Baseline' in cleaned_df['form_name'].values
@@ -81,7 +81,7 @@ class TestDataCleaner:
         assert len(cleaned_df.columns) == len(cleaned_df.columns.unique())
 
     def test_clean_reports_form_names(self):
-        cleaned_df = self.cleaner.clean_reports_form_names(self.test_report)
+        cleaned_df = self.cleaner.clean_reports_form_names(self.test_report, data_type='questionnaire')
 
         assert 'baseline_researcher_cb' not in cleaned_df['redcap_event_name'].values
         assert 'baseline' in cleaned_df['redcap_event_name'].values

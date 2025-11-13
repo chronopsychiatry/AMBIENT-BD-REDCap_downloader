@@ -112,7 +112,7 @@ class Report(DataMixin):
         elif 'field_record_id' in self.data.columns and 'redcap_repeat_instrument' in self.data.columns:
             return 'ema'
         else:
-            raise ValueError('Unknown report data type.')
+            raise ValueError('Could not infer report data type.')
 
     def get_subjects(self) -> list[str]:
         """
@@ -130,7 +130,7 @@ class Report(DataMixin):
             subject_ids = self.data['field_7uslb44zkd7bybb6'].dropna().unique().astype('int').tolist()
             return [f"ABD{sid:03d}" for sid in subject_ids]
         else:
-            raise ValueError('Unknown report data type.')
+            raise ValueError('Could not list subjects: unknown report data type.')
 
 
 class Variables(DataMixin):
@@ -207,4 +207,4 @@ class Variables(DataMixin):
         elif 'field_record_id' in self.data.field_name.values:
             return 'ema'
         else:
-            raise ValueError('Unknown variables data type.')
+            raise ValueError('Could not infer variables data type.')

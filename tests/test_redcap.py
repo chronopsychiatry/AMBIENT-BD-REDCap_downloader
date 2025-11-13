@@ -21,7 +21,7 @@ def redcap(properties):
 
 
 def test_get_questionnaire_variables_success(redcap):
-    csv_data = "field_name,form_name\nfield1,screening\nfield2,baseline"
+    csv_data = "field_name,form_name\nstudy_id,screening\nparticipant_id,baseline"
     mock_response = MagicMock()
     mock_response.status_code = 200
     mock_response.text = csv_data
