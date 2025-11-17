@@ -10,7 +10,8 @@ setup(
     python_requires='>=3.10',
     install_requires=[
         'pandas>=2.3.0',
-        'requests>=2.32.0'
+        'requests>=2.32.0',
+        'setuptools>=65.5.0'
     ],
     entry_points={
         'console_scripts': [
