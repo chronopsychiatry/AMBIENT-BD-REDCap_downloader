@@ -13,6 +13,7 @@ class MockREDCap(REDCap):
     def __init__(self):
         self.test_report = pd.read_csv('./tests/data/test_report.csv')
         self.test_variables = pd.read_csv('./tests/data/test_variables.csv')
+        self.properties = type('obj', (object,), {'include_identifiers': False})
 
     def get_questionnaire_variables(self):
         return Variables(self.test_variables)
@@ -56,6 +57,15 @@ class TestDataCleaner:
         assert not subject1_report.empty
         assert 'empty_column' not in subject1_report.columns
         assert 'consent_contact' in subject1_report.columns
+
+    def test_remove_identifiers(self):
+        report = Report(self.test_report)
+        variables = Variables(self.test_variables)
+
+        cleaned_report = self.cleaner.remove_identifiers(report, variables)
+
+        assert 'name' not in cleaned_report.data.columns
+        assert 'study_id' in cleaned_report.data.columns
 
     def test_clean_variables(self):
         variables = self.cleaner.clean_variables(Variables(self.test_variables))

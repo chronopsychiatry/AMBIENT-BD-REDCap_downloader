@@ -1,4 +1,4 @@
-study_id,redcap_event_name,consent_contact,empty_column
-ABD001,baseline_arm_1,1,
-ABD002,screening_arm_1,,
-ABD003,6month_followup_arm_1,,
+study_id,redcap_event_name,consent_contact,empty_column,name
+ABD001,baseline_arm_1,1,,Bob
+ABD002,screening_arm_1,,,Alice
+ABD003,6month_followup_arm_1,,,Charlie
