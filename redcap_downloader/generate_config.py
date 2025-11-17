@@ -6,6 +6,8 @@ def generate_config():
                   'download-dir=.\\REDCap_data\n'
                   '# Report ID to download from REDCap\n'
                   'report-id=159\n'
+                  '# Include identifiers (false/true) if user has access\n'
+                  'include-identifiers=false\n'
                   '# Log level: INFO (default) or DEBUG\n'
                   'log-level=INFO'
                   )

@@ -55,11 +55,34 @@ class DataCleaner:
             None
         """
         reports = self.redcap.get_questionnaire_report()
+        if not self.redcap.properties.include_identifiers:
+            variables = self.redcap.get_questionnaire_variables()
+            reports = self.remove_identifiers(reports, variables)
         reports.save_raw_data(paths=self.paths)
 
         reports = self.clean_reports(reports)
         reports.save_cleaned_data(self.paths, by=['participant_id', 'output_form'], remove_empty_columns=True)
         self._logger.info(f'Saved cleaned questionnaire reports to {self.paths.get_reports_dir()}.')
+
+    def remove_identifiers(self, reports: Report, variables: Variables) -> Report:
+        """
+        Remove identifier fields from the reports DataFrame.
+
+        Args:
+            reports (Report): Report instance.
+            variables (Variables): Variables instance.
+        Returns:
+            Report: Report instance with identifier fields removed.
+        """
+        identifier_fields = (variables
+                             .data
+                             .query('identifier == "y"')
+                             ['field_name']
+                             .tolist()
+                             )
+        self._logger.info(f'Removing identifier fields: {identifier_fields}')
+        reports.data = reports.data.drop(columns=identifier_fields, errors='ignore')
+        return reports
 
     def clean_variables(self, variables: Variables) -> Variables:
         """
