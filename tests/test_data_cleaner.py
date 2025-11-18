@@ -54,6 +54,8 @@ class TestDataCleaner:
         assert os.path.exists(expected_path)
 
         subject1_report = pd.read_csv(expected_path)
+        test_clean = self.cleaner.clean_reports(self.mock_redcap.get_questionnaire_report())
+        print(test_clean.data)
         assert not subject1_report.empty
         assert 'empty_column' not in subject1_report.columns
         assert 'consent_contact' in subject1_report.columns
@@ -66,6 +68,8 @@ class TestDataCleaner:
 
         assert 'name' not in cleaned_report.data.columns
         assert 'study_id' in cleaned_report.data.columns
+        assert 'name' not in cleaned_report.raw_data.columns
+        assert 'study_id' in cleaned_report.raw_data.columns
 
     def test_clean_variables(self):
         variables = self.cleaner.clean_variables(Variables(self.test_variables))

@@ -12,3 +12,7 @@ def generate_config():
                   'log-level=INFO'
                   )
         f.write(config)
+
+
+if __name__ == "__main__":
+    generate_config()

@@ -81,7 +81,8 @@ class DataCleaner:
                              .tolist()
                              )
         self._logger.info(f'Removing identifier fields: {identifier_fields}')
-        reports.data = reports.data.drop(columns=identifier_fields, errors='ignore')
+        reports.data = reports.data.drop(columns=identifier_fields, axis='columns', errors='ignore')
+        reports.raw_data = reports.raw_data.drop(columns=identifier_fields, axis='columns', errors='ignore')
         return reports
 
     def clean_variables(self, variables: Variables) -> Variables:

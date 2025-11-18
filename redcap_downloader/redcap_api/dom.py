@@ -80,7 +80,7 @@ class Report(DataMixin):
             file_path = paths.get_subject_questionnaire(subject_id=df.participant_id.iloc[0],
                                                         data_type='EMA_' if self.data_type == 'ema' else '',
                                                         event_name=df.output_form.iloc[0])
-            df.drop(columns=['output_form']).to_csv(file_path, index=False)
+            df.drop(columns=['output_form'], axis='columns').to_csv(file_path, index=False)
             self._logger.debug(f'Saved cleaned report data to {file_path}')
 
     def save_raw_data(self, paths: PathResolver):
