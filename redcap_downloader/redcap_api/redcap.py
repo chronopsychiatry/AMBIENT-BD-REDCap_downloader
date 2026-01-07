@@ -14,7 +14,8 @@ class REDCap:
     Attributes:
         token (str): API token for the REDCap project.
         base_url (str): Base URL for the REDCap API.
-        report_id (int): ID of the report to fetch.
+        properties (Properties): Values from the properties file for the download.
+        api_access (bool): Indicates if the API access is successful.
 
     Methods:
         get_questionnaire_variables(): Fetches the list of questionnaire variables from the REDCap API.
@@ -24,7 +25,6 @@ class REDCap:
         self._logger = logging.getLogger('REDCap')
         self.token = properties.redcap_token
         self.base_url = 'https://redcap.usher.ed.ac.uk/api/'
-        self.report_id = properties.report_id
         self.properties = properties
         self.api_access = self.has_api_access()
 
@@ -85,9 +85,9 @@ class REDCap:
         """
         data = {
             'token': self.token,
-            'content': 'report',
+            'content': 'record',
             'format': 'csv',
-            'report_id': self.report_id,
+            'type': 'flat',
             'csvDelimiter': '',
             'rawOrLabel': 'raw',
             'rawOrLabelHeaders': 'raw',
@@ -97,7 +97,7 @@ class REDCap:
 
         r = requests.post(self.base_url, data=data)
         if r.status_code != 200:
-            self._logger.error(f"Failed to fetch report: {r.text}")
+            self._logger.error(f"Failed to fetch report data: {r.text}")
             raise Exception(f"HTTP Error: {r.status_code}")
-        self._logger.info(f'Fetched report {self.report_id} through the REDCap API.')
+        self._logger.info('Fetched report data through the REDCap API.')
         return Report(pd.read_csv(StringIO(r.text)))

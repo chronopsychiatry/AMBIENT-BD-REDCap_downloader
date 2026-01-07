@@ -9,27 +9,24 @@ class Properties():
     Attributes:
         redcap_token_file (str): Path to the file containing the REDCap API token.
         download_folder (str): Directory where downloaded data will be stored.
-        report_id (int): ID of the report to fetch from REDCap.
         log_level (str): Logging level for the application.
     """
     def __init__(self,
                  redcap_token_file: str | Path = None,
                  download_folder: str | Path = '../downloaded_data',
-                 report_id: int | None = None,
                  include_identifiers: bool = False,
                  log_level: str = 'INFO'
                  ):
 
         self.redcap_token_file = Path(redcap_token_file or './redcap_token.txt')
         self.download_folder = Path(download_folder or '../downloaded_data')
-        self.report_id = report_id
         self.include_identifiers = include_identifiers
         self.log_level = log_level
         self.redcap_token = read_token(self.redcap_token_file)
 
     def __str__(self):
         return f"Properties(redcap_token_file={self.redcap_token_file}, " \
-               f"download_folder={self.download_folder}, report_id={self.report_id}, " \
+               f"download_folder={self.download_folder}, " \
                f"log_level={self.log_level})"
 
 
@@ -55,7 +52,6 @@ def load_application_properties(file_path: str | Path = './REDCap_downloader.pro
     return Properties(
         redcap_token_file=config['DEFAULT'].get('token-file', None),
         download_folder=config['DEFAULT'].get('download-dir', None),
-        report_id=config['DEFAULT'].get('report-id', None),
         include_identifiers=config['DEFAULT'].getboolean('include-identifiers', False),
         log_level=config['DEFAULT'].get('log-level', 'INFO')
     )

@@ -10,9 +10,8 @@ Accessing REDCap data requires having an API token. This must be requested throu
 
 Create the "REDCap_downloader.properties" file with the command `redcap_generate_config`. The config file will contain the following fields:
 
-- `token-file`: the path to the text file containing your REDCap API token
+- `token-file`: the path to the text file containing your REDCap API token. The token will define which project data will be downloaded from.
 - `download-dir`: path to the directory where the REDCap data will be downloaded
-- `report-id`: ID of the report to download. For Ambient-BD questionnaire data, use 159, for EMA data use 190
 - `log-level`: set to INFO by default. Change to DEBUG if you have an issue with the downloader and want more info on what is happening
 
 Finally, run the following command from the directory that contains the properties file:
@@ -67,4 +66,4 @@ The Ambient-BD study uses 6 different questionnaires:
 - 12-month followup
 - 18-month followup
 
-The "Initial contact" questionnaire is saved as part of the raw data, but contains very little information (since most fields are direct identifiers that are removed during the REDCap export process). It is therefore not saved as part of the cleaned data (`meta` and `reports` folders).
+The "Initial contact" questionnaire is saved as part of the raw data, but contains very little information if direct identifiers are not included. It is therefore not saved as part of the cleaned data (`meta` and `reports` folders).

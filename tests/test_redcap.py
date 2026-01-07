@@ -7,7 +7,6 @@ from redcap_downloader.redcap_api.dom import Variables, Report
 
 class DummyProperties:
     redcap_token = "dummy_token"
-    report_id = 123
 
 
 @pytest.fixture
