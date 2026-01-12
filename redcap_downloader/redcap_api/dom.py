@@ -52,8 +52,9 @@ class Report(DataMixin):
         self.grouper = 'redcap_event_name' if self.data_type == 'questionnaire' else 'redcap_repeat_instrument'
 
         self._logger.info(f'Initialised report for {len(self.subject_list)} subjects.')
-        self._logger.info(f'Number of questionnaires: \
+        self._logger.info(f'Number of records: \
                           {self.data.groupby(self.grouper).size().sort_values(ascending=False)}')
+        self._logger.debug(f'Report data type: {self.data_type}')
         self._logger.debug(f'Subject list: {self.subject_list}')
 
     def __str__(self):

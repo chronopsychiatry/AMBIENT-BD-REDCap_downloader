@@ -1,6 +1,6 @@
 import logging
 from pathlib import Path
-from importlib.metadata import version, PackageNotFoundError
+from importlib.metadata import version
 from datetime import datetime
 
 from .config.properties import load_application_properties
@@ -28,10 +28,7 @@ def main():
     )
 
     logger = logging.getLogger('main')
-    try:
-        pkg_version = version("redcap_downloader")
-    except PackageNotFoundError:
-        pkg_version = "unknown"
+    pkg_version = version("redcap_downloader")
     logger.info(f'Running redcap_downloader version {pkg_version}')
 
     paths = PathResolver(properties.download_folder)

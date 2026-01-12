@@ -6,7 +6,7 @@ import pandas as pd
 from ..redcap_api.redcap import REDCap, Variables, Report
 from ..storage.path_resolver import PathResolver
 from .helpers import replace_strings, merge_duplicate_columns
-from .replacements import FORM_NAME_REPLACEMENTS, FIELD_NAME_REPLACEMENTS
+from .replacements import FORM_NAMES, FIELD_NAMES
 
 
 class DataCleaner:
@@ -126,7 +126,9 @@ class DataCleaner:
                 cleaned_reports
                 .assign(
                     participant_id=lambda df: df['participant_id'].ffill().astype('int').apply(lambda x: f"ABD{x:03d}")
-                ))
+                )
+                .query('participant_id != "ABD999"')
+                )
         return reports
 
     def clean_variables_form_names(self, df: pd.DataFrame, data_type: str) -> pd.DataFrame:
@@ -142,8 +144,8 @@ class DataCleaner:
         """
         df = (df
               .assign(
-                      form_name=lambda df: replace_strings(df.form_name, FORM_NAME_REPLACEMENTS),
-                      field_name=lambda df: replace_strings(df.field_name, FIELD_NAME_REPLACEMENTS)
+                      form_name=lambda df: replace_strings(df.form_name, FORM_NAMES),
+                      field_name=lambda df: replace_strings(df.field_name, FIELD_NAMES)
                       ))
         if data_type == 'questionnaire':
             df = df.assign(output_form=lambda df: np.where(df.form_name == 'Screening', 'Scre', 'Ques'))
@@ -167,9 +169,15 @@ class DataCleaner:
                   .assign(redcap_event_name=lambda df: replace_strings(df.redcap_event_name, {'_arm_1': ''}),
                           output_form=lambda df: np.where(df.redcap_event_name == 'screening', 'Scre', 'Ques')
                           ))
+        elif data_type == 'ema':
+            df = (df
+                  .assign(redcap_repeat_instrument=lambda df: replace_strings(df.redcap_repeat_instrument, FORM_NAMES),
+                          output_form=lambda df: df.redcap_repeat_instrument
+                          )
+                  )
         return (df
                 .rename(columns=lambda df: (
-                    reduce(lambda s, kv: s.replace(kv[0], kv[1]), FIELD_NAME_REPLACEMENTS.items(), df)
+                    reduce(lambda s, kv: s.replace(kv[0], kv[1]), FIELD_NAMES.items(), df)
                 ))
                 .pipe(merge_duplicate_columns)
                 )
