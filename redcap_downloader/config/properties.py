@@ -22,7 +22,7 @@ class Properties():
         self.download_folder = Path(download_folder or '../downloaded_data')
         self.include_identifiers = include_identifiers
         self.log_level = log_level
-        self.redcap_token = read_token(self.redcap_token_file)
+        self.redcap_tokens = read_tokens(self.redcap_token_file)
 
     def __str__(self):
         return f"Properties(redcap_token_file={self.redcap_token_file}, " \
@@ -57,18 +57,18 @@ def load_application_properties(file_path: str | Path = './REDCap_downloader.pro
     )
 
 
-def read_token(file_path: str | Path) -> str:
+def read_tokens(file_path: str | Path) -> list[str]:
     """
-    Read the REDCap API token from a specified file.
+    Read a list of REDCap API tokens from a specified file.
 
     Args:
         file_path (str): Path to the token file.
     Returns:
-        str: The REDCap API token.
+        list[str]: A list of REDCap API tokens.
     """
     file_path = Path(file_path)
     if not file_path.exists():
         raise ValueError(f"Token file not found: {file_path}")
     with file_path.open('r') as f:
-        token = f.readline().strip(' \t\n\r')
-    return token
+        token_list = f.readlines()
+    return [token.strip('\n') for token in token_list]

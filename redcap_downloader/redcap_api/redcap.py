@@ -4,7 +4,6 @@ from io import StringIO
 import logging
 
 from .dom import Variables, Report
-from ..config.properties import Properties
 
 
 class REDCap:
@@ -21,11 +20,10 @@ class REDCap:
         get_questionnaire_variables(): Fetches the list of questionnaire variables from the REDCap API.
         get_questionnaire_report(): Fetches the questionnaire answers from the REDCap API.
     """
-    def __init__(self, properties: Properties):
+    def __init__(self, token: str):
         self._logger = logging.getLogger('REDCap')
-        self.token = properties.redcap_token
+        self.token = token
         self.base_url = 'https://redcap.usher.ed.ac.uk/api/'
-        self.properties = properties
         self.api_access = self.has_api_access()
 
     def has_api_access(self) -> bool:
@@ -50,9 +48,31 @@ class REDCap:
         self._logger.info('Successfully accessed REDCap API.')
         return True
 
-    def get_questionnaire_variables(self):
+    def get_project_title(self) -> str:
         """
-        Fetch the list of questionnaire variables from the REDCap API.
+        Fetch the project title from the REDCap API.
+
+        Args:
+            None
+        Returns:
+            str: The title of the REDCap project.
+        """
+        data = {
+            'token': self.token,
+            'content': 'project',
+            'format': 'json',
+            'returnFormat': 'json'
+        }
+        r = requests.post(self.base_url, data=data)
+        if r.status_code != 200:
+            self._logger.error(f"Failed to fetch project title: {r.text}")
+            raise Exception(f"HTTP Error: {r.status_code}")
+        project_info = r.json()
+        return project_info.get('project_title', 'Unknown Project')
+
+    def get_variables(self):
+        """
+        Fetch the list of variables from the REDCap API.
 
         Args:
             None
@@ -73,9 +93,9 @@ class REDCap:
         self._logger.info('Accessing variable dictionary through the REDCap API.')
         return Variables(pd.read_csv(StringIO(r.text)))
 
-    def get_questionnaire_report(self):
+    def get_report(self):
         """
-        Fetch the questionnaire answers from the REDCap API.
+        Fetch the report (all data) from the REDCap API.
 
         Args:
             None

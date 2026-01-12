@@ -3,7 +3,8 @@ import logging
 import numpy as np
 import pandas as pd
 
-from ..redcap_api.redcap import REDCap, Variables, Report
+from ..redcap_api.dom import Variables, Report
+from ..config.properties import Properties
 from ..storage.path_resolver import PathResolver
 from .helpers import replace_strings, merge_duplicate_columns
 from .replacements import FORM_NAMES, FIELD_NAMES
@@ -11,24 +12,26 @@ from .replacements import FORM_NAMES, FIELD_NAMES
 
 class DataCleaner:
     """
-    Handles the cleaning and saving of questionnaire data from REDCap.
+    Handles the cleaning and saving of data from REDCap.
 
     Attributes:
         redcap (REDCap): Instance of the REDCap API client.
         paths (PathResolver): Instance of PathResolver to manage file paths.
 
     Methods:
-        save_questionnaire_variables(): Cleans and saves questionnaire variables.
-        save_questionnaire_reports(): Cleans and saves questionnaire reports.
+        save_variables(): Cleans and saves variables.
+        save_reports(): Cleans and saves reports.
     """
-    def __init__(self, redcap: REDCap, paths: PathResolver):
+    def __init__(self, paths: PathResolver, report: Report, variables: Variables, properties: Properties):
         self._logger = logging.getLogger('DataCleaner')
-        self.redcap = redcap
         self.paths = paths
+        self.report = report
+        self.variables = variables
+        self.properties = properties
 
-    def save_questionnaire_variables(self):
+    def save_cleaned_variables(self):
         """
-        Clean-up and save questionnaire variables from REDCap.
+        Clean-up and save variables from REDCap.
 
         Args:
             None
@@ -37,16 +40,15 @@ class DataCleaner:
             None
 
         """
-        variables = self.redcap.get_questionnaire_variables()
-        variables.save_raw_data(paths=self.paths)
+        self.variables.save_raw_data(paths=self.paths)
 
-        variables = self.clean_variables(variables)
-        variables.save_cleaned_data(paths=self.paths, by=['output_form'], remove_empty_columns=True)
-        self._logger.info(f'Saved cleaned questionnaire variables to {self.paths.get_meta_dir()}.')
+        self.variables = self.clean_variables(self.variables)
+        self.variables.save_cleaned_data(paths=self.paths, by=['output_form'], remove_empty_columns=True)
+        self._logger.info(f'Saved cleaned variables to {self.paths.get_meta_dir()}.')
 
-    def save_questionnaire_reports(self):
+    def save_cleaned_reports(self):
         """
-        Clean-up and save questionnaire reports from REDCap.
+        Clean-up and save reports from REDCap.
 
         Args:
             None
@@ -54,15 +56,13 @@ class DataCleaner:
         Returns:
             None
         """
-        reports = self.redcap.get_questionnaire_report()
-        if not self.redcap.properties.include_identifiers:
-            variables = self.redcap.get_questionnaire_variables()
-            reports = self.remove_identifiers(reports, variables)
-        reports.save_raw_data(paths=self.paths)
+        if not self.properties.include_identifiers:
+            self.reports = self.remove_identifiers(self.reports, self.variables)
+        self.reports.save_raw_data(paths=self.paths)
 
-        reports = self.clean_reports(reports)
-        reports.save_cleaned_data(self.paths, by=['participant_id', 'output_form'], remove_empty_columns=True)
-        self._logger.info(f'Saved cleaned questionnaire reports to {self.paths.get_reports_dir()}.')
+        self.reports = self.clean_reports(self.reports)
+        self.reports.save_cleaned_data(self.paths, by=['participant_id', 'output_form'], remove_empty_columns=True)
+        self._logger.info(f'Saved cleaned reports to {self.paths.get_reports_dir()}.')
 
     def remove_identifiers(self, reports: Report, variables: Variables) -> Report:
         """

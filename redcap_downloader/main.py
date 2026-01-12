@@ -6,6 +6,7 @@ from datetime import datetime
 from .config.properties import load_application_properties
 from .storage.path_resolver import PathResolver
 from .redcap_api.redcap import REDCap
+from .redcap_api.dom import Report, Variables
 from .data_cleaning.data_cleaner import DataCleaner
 
 
@@ -32,13 +33,42 @@ def main():
     logger.info(f'Running redcap_downloader version {pkg_version}')
 
     paths = PathResolver(properties.download_folder)
+    report = Report()
+    variables = Variables()
 
-    redcap = REDCap(properties)
+    for token in properties.redcap_tokens:
+        logger.debug(f'Trying to access REDCap with token {token}.')
+        redcap = REDCap(token)
 
-    cleaner = DataCleaner(redcap, paths)
+        report.append(redcap.get_report())
+        variables.append(redcap.get_variables())
 
-    cleaner.save_questionnaire_variables()
-    cleaner.save_questionnaire_reports()
+        project_title = redcap.get_project_title()
+        logger.info(f'Processing REDCap project: {project_title}')
+
+        if 'AMBIENT-BD EMA' in project_title:
+            data_type = 'ema'
+        elif 'AmbientBD - ambient and passive collection' in project_title:
+            data_type = 'questionnaire'
+        else:
+            data_type = 'unknown'
+
+        logger.debug(f'Report data type: {data_type}')
+
+        # subject_list = report.get_subjects(data_type)
+        # logger.info(f'Downloaded reports for {len(subject_list)} subjects.')
+        # logger.debug(f'Subject list: {subject_list}')
+
+    grouper = 'redcap_event_name' if data_type == 'questionnaire' else 'redcap_repeat_instrument'
+
+    logger.info(f'Total number of reports: \
+                        {report.data.groupby(grouper).size().sort_values(ascending=False)}')
+    logger.info(f'Total number of variables: {len(variables.data)}')
+
+    cleaner = DataCleaner(paths, report, variables, properties)
+
+    cleaner.save_cleaned_variables()
+    cleaner.save_cleaned_reports()
 
 
 if __name__ == '__main__':
