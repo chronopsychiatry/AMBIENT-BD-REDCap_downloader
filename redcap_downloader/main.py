@@ -58,11 +58,6 @@ def main():
         # logger.info(f'Downloaded reports for {len(subject_list)} subjects.')
         # logger.debug(f'Subject list: {subject_list}')
 
-    grouper = 'redcap_event_name' if report.data_type == 'questionnaire' else 'redcap_repeat_instrument'
-    logger.info(f'Total number of reports: \
-                        {report.data.groupby(grouper).size().sort_values(ascending=False)}')
-    logger.info(f'Total number of variables: {len(variables.data)}')
-
     cleaner = DataCleaner(paths, report, variables, properties)
 
     cleaner.save_cleaned_variables()

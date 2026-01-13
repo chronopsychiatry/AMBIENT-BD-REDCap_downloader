@@ -2,11 +2,12 @@ from functools import reduce
 import logging
 import numpy as np
 import pandas as pd
+from tabulate import tabulate
 
 from ..redcap_api.dom import Variables, Report
 from ..config.properties import Properties
 from ..storage.path_resolver import PathResolver
-from .helpers import replace_strings, merge_duplicate_columns
+from .helpers import replace_strings, merge_duplicate_columns, fill_participant_ids
 from .replacements import FORM_NAMES, FIELD_NAMES
 
 
@@ -43,6 +44,9 @@ class DataCleaner:
         self.variables.save_raw_data(paths=self.paths)
 
         self.variables = self.clean_variables(self.variables)
+
+        self._logger.info(f'Total number of variables: {len(self.variables.data)}')
+
         self.variables.save_cleaned_data(paths=self.paths, by=['output_form'], remove_empty_columns=True)
         self._logger.info(f'Saved cleaned variables to {self.paths.get_meta_dir()}.')
 
@@ -61,6 +65,9 @@ class DataCleaner:
         self.report.save_raw_data(paths=self.paths)
 
         self.report = self.clean_reports(self.report)
+
+        self._logger.info(f'Total number of report entries:\n{self.get_report_entries_table()}')
+
         self.report.save_cleaned_data(self.paths, by=['participant_id', 'output_form'], remove_empty_columns=True)
         self._logger.info(f'Saved cleaned reports to {self.paths.get_reports_dir()}.')
 
@@ -124,9 +131,7 @@ class DataCleaner:
         elif report.data_type == 'ema':
             report.data = (
                 cleaned_report
-                .assign(
-                    participant_id=lambda df: df['participant_id'].ffill().astype('int').apply(lambda x: f"ABD{x:03d}")
-                )
+                .pipe(fill_participant_ids)  # Here add a column with ema period (will require passing period nb or project title, prob as report attribute)
                 .query('participant_id != "ABD999"')
                 )
         return report
@@ -209,3 +214,23 @@ class DataCleaner:
             **df.select_dtypes(include=['object'])
             .replace(to_replace=r'<[^>]+>', value='', regex=True)
         )
+
+    def get_report_entries_table(self) -> str:
+        """
+        Generate a formatted table of report entries per form.
+
+        Args:
+            None
+        Returns:
+            str: Formatted table as a string.
+        """
+        return tabulate(self.report.data
+                        .rename(columns={'output_form': 'form'})
+                        .groupby('form')
+                        .size()
+                        .sort_values(ascending=False)
+                        .to_frame()
+                        .rename(columns={0: 'entries'}),
+                        headers='keys',
+                        tablefmt='psql'
+                        )

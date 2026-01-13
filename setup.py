@@ -10,6 +10,7 @@ setup(
     python_requires='>=3.10',
     install_requires=[
         'pandas>=2.3.0',
+        'tabulate>=0.9.0',
         'requests>=2.32.0',
         'setuptools>=65.5.0'
     ],

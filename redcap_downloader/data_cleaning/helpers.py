@@ -36,3 +36,23 @@ def replace_strings(series: pd.Series, replacements: dict) -> pd.Series:
     for old, new in replacements.items():
         series = series.str.replace(old, new, regex=False)
     return series
+
+
+def fill_participant_ids(df):
+    """
+    Fill missing participant IDs in the DataFrame.
+
+    Args:
+        df (pd.DataFrame): DataFrame to be processed.
+    Returns:
+        None
+    """
+    return (df
+            .assign(
+                participant_id=lambda df: df
+                ['participant_id']
+                .infer_objects(copy=False)
+                .ffill()
+                .astype('int')
+                .apply(lambda x: f"ABD{x:03d}")
+            ))
