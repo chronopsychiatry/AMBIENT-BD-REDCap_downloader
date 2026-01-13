@@ -40,27 +40,25 @@ def main():
         logger.debug(f'Trying to access REDCap with token {token}.')
         redcap = REDCap(token)
 
-        report.append(redcap.get_report())
-        variables.append(redcap.get_variables())
-
         project_title = redcap.get_project_title()
         logger.info(f'Processing REDCap project: {project_title}')
 
-        if 'AMBIENT-BD EMA' in project_title:
-            data_type = 'ema'
-        elif 'AmbientBD - ambient and passive collection' in project_title:
-            data_type = 'questionnaire'
-        else:
-            data_type = 'unknown'
+        report.append(redcap.get_report())
+        variables.append(redcap.get_variables())
 
-        logger.debug(f'Report data type: {data_type}')
+        previous_data_type = report.data_type
+        report.set_data_type(project_title)
+        variables.set_data_type(project_title)
+        logger.debug(f'Report data type: {report.data_type}')
+
+        if previous_data_type and previous_data_type != report.data_type:
+            logger.warning('REDCap projects have different data types. Check your API tokens.')
 
         # subject_list = report.get_subjects(data_type)
         # logger.info(f'Downloaded reports for {len(subject_list)} subjects.')
         # logger.debug(f'Subject list: {subject_list}')
 
-    grouper = 'redcap_event_name' if data_type == 'questionnaire' else 'redcap_repeat_instrument'
-
+    grouper = 'redcap_event_name' if report.data_type == 'questionnaire' else 'redcap_repeat_instrument'
     logger.info(f'Total number of reports: \
                         {report.data.groupby(grouper).size().sort_values(ascending=False)}')
     logger.info(f'Total number of variables: {len(variables.data)}')

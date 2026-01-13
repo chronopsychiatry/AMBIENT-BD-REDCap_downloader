@@ -16,9 +16,9 @@ class DataMixin:
     Methods:
         split(by): Splits the DataFrame into a list of DataFrames based on the specified columns.
         append(other): Appends data from another DataMixin instance.
+        set_data_type(title): Determines the data type (ema or questionnaire) based on the project title.
     """
     def __init__(self):
-        self.data = pd.DataFrame()
         self._logger = logging.getLogger(self.__class__.__name__)
 
     def split(self, by: list[str] | str) -> list[pd.DataFrame]:
@@ -44,6 +44,23 @@ class DataMixin:
         self.data = pd.concat([self.data, other.data], ignore_index=True)
         self.raw_data = pd.concat([self.raw_data, other.raw_data], ignore_index=True)
 
+    def set_data_type(self, title) -> str:
+        """
+        Determine the data type of the data based on the project title.
+
+        Args:
+            None
+
+        Returns:
+            str: The data type ('questionnaire' or 'ema').
+        """
+        if 'AMBIENT-BD EMA' in title:
+            self.data_type = 'ema'
+        elif 'AmbientBD - ambient and passive collection' in title:
+            self.data_type = 'questionnaire'
+        else:
+            self.data_type = None
+
 
 class Report(DataMixin):
     """
@@ -60,6 +77,7 @@ class Report(DataMixin):
         super().__init__()
         self.data = report_data
         self.raw_data = report_data
+        self.data_type = None
 
     def __str__(self):
         return f"Report with {self.data.shape[0]} entries and {self.data.shape[1]} columns"
@@ -136,6 +154,7 @@ class Variables(DataMixin):
         super().__init__()
         self.raw_data = variables_data
         self.data = variables_data
+        self.data_type = None
 
     def __str__(self):
         return f"Variables with {self.raw_data.shape[0]} entries"

@@ -57,33 +57,33 @@ class DataCleaner:
             None
         """
         if not self.properties.include_identifiers:
-            self.reports = self.remove_identifiers(self.reports, self.variables)
-        self.reports.save_raw_data(paths=self.paths)
+            self.report = self.remove_identifiers(self.report, self.variables)
+        self.report.save_raw_data(paths=self.paths)
 
-        self.reports = self.clean_reports(self.reports)
-        self.reports.save_cleaned_data(self.paths, by=['participant_id', 'output_form'], remove_empty_columns=True)
+        self.report = self.clean_reports(self.report)
+        self.report.save_cleaned_data(self.paths, by=['participant_id', 'output_form'], remove_empty_columns=True)
         self._logger.info(f'Saved cleaned reports to {self.paths.get_reports_dir()}.')
 
-    def remove_identifiers(self, reports: Report, variables: Variables) -> Report:
+    def remove_identifiers(self, report: Report, variables: Variables) -> Report:
         """
         Remove identifier fields from the reports DataFrame.
 
         Args:
-            reports (Report): Report instance.
+            report (Report): Report instance.
             variables (Variables): Variables instance.
         Returns:
             Report: Report instance with identifier fields removed.
         """
         identifier_fields = (variables
-                             .data
+                             .raw_data
                              .query('identifier == "y"')
                              ['field_name']
                              .tolist()
                              )
         self._logger.info(f'Removing identifier fields: {identifier_fields}')
-        reports.data = reports.data.drop(columns=identifier_fields, axis='columns', errors='ignore')
-        reports.raw_data = reports.raw_data.drop(columns=identifier_fields, axis='columns', errors='ignore')
-        return reports
+        report.data = report.data.drop(columns=identifier_fields, axis='columns', errors='ignore')
+        report.raw_data = report.raw_data.drop(columns=identifier_fields, axis='columns', errors='ignore')
+        return report
 
     def clean_variables(self, variables: Variables) -> Variables:
         """
@@ -105,31 +105,31 @@ class DataCleaner:
         variables.data = cleaned_var
         return variables
 
-    def clean_reports(self, reports: Report) -> Report:
+    def clean_reports(self, report: Report) -> Report:
         """
         Clean-up the reports DataFrame.
 
         Args:
-            reports (Report): Report instance containing raw data.
+            report (Report): Report instance containing raw data.
 
         Returns:
             Report: Report instance with cleaned data added.
         """
-        cleaned_reports = (reports
-                           .data
-                           .pipe(self.clean_reports_form_names, data_type=reports.data_type)
-                           )
-        if reports.data_type == 'questionnaire':
-            reports.data = cleaned_reports.query('redcap_event_name != "initial_contact"')
-        elif reports.data_type == 'ema':
-            reports.data = (
-                cleaned_reports
+        cleaned_report = (report
+                          .data
+                          .pipe(self.clean_reports_form_names, data_type=report.data_type)
+                          )
+        if report.data_type == 'questionnaire':
+            report.data = cleaned_report.query('redcap_event_name != "initial_contact"')
+        elif report.data_type == 'ema':
+            report.data = (
+                cleaned_report
                 .assign(
                     participant_id=lambda df: df['participant_id'].ffill().astype('int').apply(lambda x: f"ABD{x:03d}")
                 )
                 .query('participant_id != "ABD999"')
                 )
-        return reports
+        return report
 
     def clean_variables_form_names(self, df: pd.DataFrame, data_type: str) -> pd.DataFrame:
         """
