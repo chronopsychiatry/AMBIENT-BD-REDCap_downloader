@@ -59,10 +59,6 @@ def main():
         logger.debug(f'Report data type: {redcap.data_type}')
         data_type = redcap.data_type
 
-        # subject_list = report.get_subjects(data_type)
-        # logger.info(f'Downloaded reports for {len(subject_list)} subjects.')
-        # logger.debug(f'Subject list: {subject_list}')
-
     cleaner = DataCleaner(paths, report, variables, data_type)
 
     cleaner.save_cleaned_variables()

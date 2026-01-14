@@ -6,7 +6,7 @@ from tabulate import tabulate
 
 from ..redcap_api.dom import Variables, Report
 from ..storage.path_resolver import PathResolver
-from .helpers import replace_strings, merge_duplicate_columns, fill_participant_ids
+from .helpers import replace_strings, merge_duplicate_columns, fill_participant_ids, fix_24h_sleeptimes
 from .replacements import FORM_NAMES, FIELD_NAMES
 
 
@@ -131,16 +131,23 @@ class DataCleaner:
         """
         cleaned_report = (report
                           .data
-                          .pipe(self.clean_reports_form_names, data_type=self.data_type)
+                          .pipe(self.clean_reports_form_names)
                           .drop_duplicates(ignore_index=True)
                           )
         if self.data_type == 'questionnaire':
-            report.data = cleaned_report.query('redcap_event_name != "initial_contact"')
+            report.data = (
+                cleaned_report
+                .loc[cleaned_report['participant_id'].str.contains('ABD')]
+                .query('redcap_event_name != "initial_contact" and\
+                            redcap_event_name != "scheduling_emails"'
+                       )
+            )
         elif self.data_type == 'ema':
             report.data = (
                 cleaned_report
                 .pipe(fill_participant_ids)
                 .query('participant_id != "ABD999"')
+                .pipe(fix_24h_sleeptimes, self._logger)
                 )
         return report
 
@@ -166,23 +173,22 @@ class DataCleaner:
             df = df.assign(output_form=lambda df: df.form_name)
         return (df.pipe(merge_duplicate_columns))
 
-    def clean_reports_form_names(self, df: pd.DataFrame, data_type: str) -> pd.DataFrame:
+    def clean_reports_form_names(self, df: pd.DataFrame) -> pd.DataFrame:
         """
         Clean-up the form and column names of the reports DataFrame.
 
         Args:
             df (pd.DataFrame): DataFrame containing report data.
-            data_type (str): The type of data ('questionnaire' or 'ema').
 
         Returns:
             pd.DataFrame: DataFrame with cleaned form and column names.
         """
-        if data_type == 'questionnaire':
+        if self.data_type == 'questionnaire':
             df = (df
                   .assign(redcap_event_name=lambda df: replace_strings(df.redcap_event_name, {'_arm_1': ''}),
                           output_form=lambda df: np.where(df.redcap_event_name == 'screening', 'Scre', 'Ques')
                           ))
-        elif data_type == 'ema':
+        elif self.data_type == 'ema':
             df = (df
                   .assign(redcap_repeat_instrument=lambda df: replace_strings(df.redcap_repeat_instrument, FORM_NAMES),
                           output_form=lambda df: df.redcap_repeat_instrument

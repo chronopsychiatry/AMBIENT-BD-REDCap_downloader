@@ -74,3 +74,27 @@ def get_ema_period_number(project_title: str) -> int:
         return int(match.group(1))
     else:
         raise ValueError('Could not extract EMA period number from project title.')
+
+
+def fix_24h_sleeptimes(df: pd.DataFrame, logger) -> pd.DataFrame:
+    """
+    Sleeptimes are sometimes incorrectly recorded in 12-hour format.
+    This function detects sleeptimes that are between 6am and 12pm, and shifts them by 12 hours.
+
+    Args:
+        df (pd.DataFrame): DataFrame to be processed.
+        logger: Logger instance for logging warnings.
+    Returns:
+        pd.DataFrame: DataFrame with corrected sleeptimes.
+    """
+    flags = df.query('try_sleep_time >= "06:00:00" and try_sleep_time < "12:00:00"')
+    flagged_participants = sorted(flags['participant_id'].unique())
+    if len(flagged_participants) > 0:
+        logger.warning(f'Correcting sleeptimes for participants: {flagged_participants}')
+        df.loc[flags.index, 'try_sleep_time'] = (
+            pd.to_datetime(
+                df.loc[flags.index, 'try_sleep_time'],
+                format='%H:%M:%S'
+            ) + pd.Timedelta(hours=12)
+        ).dt.time
+    return df
