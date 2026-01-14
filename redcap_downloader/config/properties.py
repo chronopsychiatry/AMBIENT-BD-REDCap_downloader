@@ -9,6 +9,7 @@ class Properties():
     Attributes:
         redcap_token_file (str): Path to the file containing the REDCap API token.
         download_folder (str): Directory where downloaded data will be stored.
+        include_identifiers (bool): Whether to include identifier fields in the downloaded data (if user has access).
         log_level (str): Logging level for the application.
     """
     def __init__(self,
@@ -65,6 +66,8 @@ def read_tokens(file_path: str | Path) -> list[str]:
         file_path (str): Path to the token file.
     Returns:
         list[str]: A list of REDCap API tokens.
+    Raises:
+        ValueError: If the token file does not exist.
     """
     file_path = Path(file_path)
     if not file_path.exists():

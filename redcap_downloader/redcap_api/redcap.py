@@ -13,12 +13,16 @@ class REDCap:
     Attributes:
         token (str): API token for the REDCap project.
         base_url (str): Base URL for the REDCap API.
-        properties (Properties): Values from the properties file for the download.
         api_access (bool): Indicates if the API access is successful.
+        project_title (str): Title of the REDCap project.
+        data_type (str): Type of data in the project ('questionnaire' or 'ema').
 
     Methods:
-        get_questionnaire_variables(): Fetches the list of questionnaire variables from the REDCap API.
-        get_questionnaire_report(): Fetches the questionnaire answers from the REDCap API.
+        has_api_access(): Checks if the REDCap API is accessible with the provided token.
+        get_variables(): Fetches the list of questionnaire variables from the REDCap API.
+        get_report(): Fetches the questionnaire answers from the REDCap API.
+        get_project_title(): Fetches the project title from the REDCap API.
+        get_data_type(): Determines the data type of the REDCap project based on its title.
     """
     def __init__(self, token: str):
         self._logger = logging.getLogger('REDCap')

@@ -27,7 +27,7 @@ class TestReport:
             'output_form': ['form1', 'form2', 'form2'],
         })
         report.save_cleaned_data(self.paths, by=['participant_id', 'redcap_event_name'])
-        assert os.path.exists(self.paths.get_subject_questionnaire(subject_id='1', data_type='', event_name='form1'))
+        assert os.path.exists(self.paths.get_subject_questionnaire(subject_id='1', event_name='form1'))
 
     def test_save_raw_data(self):
         report = Report(self.test_report)
@@ -45,14 +45,9 @@ class TestReport:
             assert 'study_id' in df.columns
             assert 'redcap_event_name' in df.columns
 
-    def test_get_data_type(self):
-        report = Report(self.test_report)
-        data_type = report.get_data_type()
-        assert data_type == 'questionnaire'
-
     def test_get_subjects(self):
         report = Report(self.test_report)
-        subjects = report.get_subjects()
+        subjects = report.get_subjects(data_type='questionnaire')
         assert isinstance(subjects, list)
         assert 'ABD001' in subjects
         assert 'ABD002' in subjects
@@ -95,8 +90,3 @@ class TestVariables:
             assert isinstance(df, pd.DataFrame)
             assert 'form_name' in df.columns
             assert 'field_name' in df.columns
-
-    def test_get_data_type(self):
-        variables = Variables(self.test_variables)
-        data_type = variables.get_data_type()
-        assert data_type == 'questionnaire'

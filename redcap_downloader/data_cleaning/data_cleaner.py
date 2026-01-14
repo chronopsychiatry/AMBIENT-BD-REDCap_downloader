@@ -15,12 +15,15 @@ class DataCleaner:
     Handles the cleaning and saving of data from REDCap.
 
     Attributes:
-        redcap (REDCap): Instance of the REDCap API client.
         paths (PathResolver): Instance of PathResolver to manage file paths.
+        report (Report): Instance of Report containing report data.
+        variables (Variables): Instance of Variables containing variable data.
+        data_type (str): Type of data ('questionnaire' or 'ema').
+        include_identifiers (bool): Whether to include identifier fields in the reports.
 
     Methods:
-        save_variables(): Cleans and saves variables.
-        save_reports(): Cleans and saves reports.
+        save_cleaned_variables(): Cleans and saves variables.
+        save_cleaned_reports(): Cleans and saves reports.
     """
     def __init__(self,
                  paths: PathResolver,
@@ -106,14 +109,14 @@ class DataCleaner:
             variables (Variables): Variables instance containing raw data.
 
         Returns:
-            Variables: Variables instance with cleaned data added.
+            variables: Variables instance with cleaned data added.
         """
         cleaned_var = (variables
                        .data
                        .query('form_name != "participant_information"')
                        .pipe(self.remove_html_tags)
                        .pipe(self.filter_variables_columns)
-                       .pipe(self.clean_variables_form_names, data_type=self.data_type)
+                       .pipe(self.clean_variables_form_names)
                        .drop_duplicates(ignore_index=True)
                        )
         variables.data = cleaned_var
@@ -127,7 +130,7 @@ class DataCleaner:
             report (Report): Report instance containing raw data.
 
         Returns:
-            Report: Report instance with cleaned data added.
+            report: Report instance with cleaned data.
         """
         cleaned_report = (report
                           .data
@@ -151,13 +154,12 @@ class DataCleaner:
                 )
         return report
 
-    def clean_variables_form_names(self, df: pd.DataFrame, data_type: str) -> pd.DataFrame:
+    def clean_variables_form_names(self, df: pd.DataFrame) -> pd.DataFrame:
         """
         Replace form names by human-readable names and merge researcher and participant forms.
 
         Args:
             df (pd.DataFrame): DataFrame containing variable data.
-            data_type (str): The type of data ('questionnaire' or 'ema').
 
         Returns:
             pd.DataFrame: DataFrame with cleaned form names.
@@ -167,9 +169,9 @@ class DataCleaner:
                       form_name=lambda df: replace_strings(df.form_name, FORM_NAMES),
                       field_name=lambda df: replace_strings(df.field_name, FIELD_NAMES)
                       ))
-        if data_type == 'questionnaire':
+        if self.data_type == 'questionnaire':
             df = df.assign(output_form=lambda df: np.where(df.form_name == 'Screening', 'Scre', 'Ques'))
-        elif data_type == 'ema':
+        elif self.data_type == 'ema':
             df = df.assign(output_form=lambda df: df.form_name)
         return (df.pipe(merge_duplicate_columns))
 

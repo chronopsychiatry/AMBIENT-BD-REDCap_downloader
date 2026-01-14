@@ -46,7 +46,7 @@ class DataMixin:
 
 class Report(DataMixin):
     """
-    Represents a report containing questionnaire answers, exported from REDCap.
+    Represents a report containing data exported from REDCap.
 
     Attributes:
         raw_data (pd.DataFrame): The raw report data (will not get affected by data cleaning operations).
@@ -65,7 +65,7 @@ class Report(DataMixin):
 
     def save_cleaned_data(self, paths: PathResolver, by: list[str] | str = '', remove_empty_columns: bool = True):
         """
-        Save cleaned questionnaire report data after splitting it by the specified columns.
+        Save cleaned report data to a csv file after splitting it by the specified columns.
 
         Args:
             paths (PathResolver): PathResolver instance to get the save paths.
@@ -88,10 +88,9 @@ class Report(DataMixin):
 
     def save_raw_data(self, paths: PathResolver):
         """
-        Save raw data to a specified path.
+        Save raw data to a csv file.
 
         Args:
-            raw_data (pd.DataFrame): DataFrame containing the raw data.
             paths (PathResolver): PathResolver instance to get the save paths.
 
         Returns:
@@ -105,10 +104,11 @@ class Report(DataMixin):
         Get the list of unique subject identifiers in the report.
 
         Args:
-            None
-
+            data_type (str): The type of data ('questionnaire' or 'ema').
         Returns:
             list[str]: List of unique subject identifiers.
+        Raises:
+            ValueError: If the data type is unknown.
         """
         if data_type == 'questionnaire':
             return self.data['study_id'].unique().tolist()
@@ -121,14 +121,14 @@ class Report(DataMixin):
 
 class Variables(DataMixin):
     """
-    Represents a set of variables from the questionnaires of a REDCap project.
+    Represents a set of variables from a REDCap project.
 
     Attributes:
         raw_data (pd.DataFrame): The raw variables data (will not get affected by data cleaning operations).
         data (pd.DataFrame): The variables data (will be affected by data cleaning operations).
 
     Methods:
-        save_cleaned_data(paths): Saves cleaned variables data to disk.
+        save_cleaned_data(paths): Saves cleaned variables data.
     """
     def __init__(self, variables_data: pd.DataFrame = pd.DataFrame()):
         super().__init__()
@@ -162,10 +162,9 @@ class Variables(DataMixin):
 
     def save_raw_data(self, paths: PathResolver):
         """
-        Save raw data to a specified path.
+        Save raw data to a csv file.
 
         Args:
-            raw_data (pd.DataFrame): DataFrame containing the raw data.
             paths (PathResolver): PathResolver instance to get the save paths.
 
         Returns:
@@ -173,21 +172,3 @@ class Variables(DataMixin):
         """
         self.raw_data.to_csv(paths.get_raw_variables_file(), index=False)
         self._logger.info(f'Saved raw data to {paths.get_raw_variables_file()}')
-
-    def get_data_type(self) -> str:
-        """
-        Determine the data type of the variables based on the variable names.
-
-        Args:
-            None
-
-        Returns:
-            str: The data type ('questionnaire' or 'ema').
-        """
-        self._logger.debug(f'Variable field names: {self.data.field_name.tolist()}')
-        if 'study_id' in self.data.field_name.values and 'participant_id' in self.data.field_name.values:
-            return 'questionnaire'
-        elif 'field_record_id' in self.data.field_name.values:
-            return 'ema'
-        else:
-            raise ValueError('Could not infer variables data type.')

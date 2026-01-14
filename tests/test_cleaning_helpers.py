@@ -1,6 +1,13 @@
 import pandas as pd
+import logging
 
-from redcap_downloader.data_cleaning.helpers import drop_empty_columns, merge_duplicate_columns, replace_strings
+from redcap_downloader.data_cleaning.helpers import (drop_empty_columns,
+                                                     merge_duplicate_columns,
+                                                     replace_strings,
+                                                     fill_participant_ids,
+                                                     get_ema_period_number,
+                                                     fix_24h_sleeptimes
+                                                     )
 
 
 class TestCleaningHelpers:
@@ -36,3 +43,39 @@ class TestCleaningHelpers:
         result = replace_strings(series, replacements)
         expected = pd.Series(['orange', 'grape', 'cherry'])
         pd.testing.assert_series_equal(result, expected)
+
+    def test_fill_participant_ids(self):
+        df = pd.DataFrame({
+            'participant_id': [2, None, 4, None, None],
+            'data': [10, 20, 30, 40, 50]
+        })
+        result = fill_participant_ids(df)
+        expected = pd.DataFrame({
+            'participant_id': ['ABD002', 'ABD002', 'ABD004', 'ABD004', 'ABD004'],
+            'data': [10, 20, 30, 40, 50]
+        })
+        pd.testing.assert_frame_equal(result, expected)
+
+    def test_get_ema_period_number(self):
+        project_title = "Ambient-BD EMA PERIOD 3"
+        result = get_ema_period_number(project_title)
+        expected = 3
+        assert result == expected
+
+    def test_fix_24h_sleeptimes(self):
+        df = pd.DataFrame({
+            'try_sleep_time': ['23:30:00', '10:15:00', '11:00:00', '22:45:00'],
+            'participant_id': ['ABD001', 'ABD001', 'ABD003', 'ABD004'],
+            'other_data': [1, 2, 3, 4]
+        })
+        logger = logging.getLogger('test_logger')
+        result = fix_24h_sleeptimes(df, logger)
+        expected = pd.DataFrame({
+            'try_sleep_time': ['23:30:00',
+                               pd.to_datetime('22:15:00', format='%H:%M:%S').time(),
+                               pd.to_datetime('23:00:00', format='%H:%M:%S').time(),
+                               '22:45:00'],
+            'participant_id': ['ABD001', 'ABD001', 'ABD003', 'ABD004'],
+            'other_data': [1, 2, 3, 4]
+        })
+        pd.testing.assert_frame_equal(result, expected)

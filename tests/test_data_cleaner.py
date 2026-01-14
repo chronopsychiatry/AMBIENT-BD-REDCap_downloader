@@ -4,40 +4,41 @@ import pandas as pd
 
 from redcap_downloader.data_cleaning.data_cleaner import DataCleaner
 from redcap_downloader.storage.path_resolver import PathResolver
-from redcap_downloader.redcap_api.redcap import REDCap
 from redcap_downloader.redcap_api.dom import Report, Variables
-
-
-class MockREDCap(REDCap):
-
-    def __init__(self):
-        self.test_report = pd.read_csv('./tests/data/test_report.csv')
-        self.test_variables = pd.read_csv('./tests/data/test_variables.csv')
-        self.properties = type('obj', (object,), {'include_identifiers': False})
-
-    def get_questionnaire_variables(self):
-        return Variables(self.test_variables)
-
-    def get_questionnaire_report(self):
-        return Report(self.test_report)
 
 
 class TestDataCleaner:
 
-    mock_redcap = MockREDCap()
     test_dir = tempfile.TemporaryDirectory()
     paths = PathResolver(test_dir.name)
-    cleaner = DataCleaner(redcap=mock_redcap, paths=paths)
-    test_report = pd.read_csv('./tests/data/test_report.csv')
-    test_variables = pd.read_csv('./tests/data/test_variables.csv')
+    report_df = pd.read_csv('./tests/data/test_report.csv')
+    variables_df = pd.read_csv('./tests/data/test_variables.csv')
+    report = Report(report_df)
+    variables = Variables(variables_df)
+    cleaner = DataCleaner(
+        paths=paths,
+        report=report,
+        variables=variables,
+        data_type='questionnaire',
+        include_identifiers=False
+    )
 
     def test_initialisation(self):
-        cleaner = DataCleaner(redcap=self.mock_redcap, paths=self.paths)
-        assert cleaner.redcap == self.mock_redcap
+        cleaner = DataCleaner(
+            paths=self.paths,
+            report=self.report,
+            variables=self.variables,
+            data_type='questionnaire',
+            include_identifiers=False
+            )
         assert cleaner.paths == self.paths
+        assert cleaner.report == self.report
+        assert cleaner.variables == self.variables
+        assert cleaner.data_type == 'questionnaire'
+        assert cleaner.include_identifiers is False
 
-    def test_save_questionnaire_variables(self):
-        self.cleaner.save_questionnaire_variables()
+    def test_save_cleaned_variables(self):
+        self.cleaner.save_cleaned_variables()
 
         expected_path = self.paths.get_variables_file(form_name='Scre')
         assert os.path.exists(expected_path)
@@ -47,24 +48,21 @@ class TestDataCleaner:
         assert 'empty_column' not in screening_form.columns
         assert 'non-selected_column' not in screening_form.columns
 
-    def test_save_questionnaire_reports(self):
-        self.cleaner.save_questionnaire_reports()
+    def test_save_cleaned_reports(self):
+        self.cleaner.save_cleaned_reports()
 
-        expected_path = self.paths.get_subject_questionnaire(subject_id='ABD001', data_type='', event_name='Ques')
+        expected_path = self.paths.get_subject_questionnaire(subject_id='ABD001', event_name='Ques')
         assert os.path.exists(expected_path)
 
         subject1_report = pd.read_csv(expected_path)
-        test_clean = self.cleaner.clean_reports(self.mock_redcap.get_questionnaire_report())
+        test_clean = self.cleaner.clean_reports(self.report)
         print(test_clean.data)
         assert not subject1_report.empty
         assert 'empty_column' not in subject1_report.columns
         assert 'consent_contact' in subject1_report.columns
 
     def test_remove_identifiers(self):
-        report = Report(self.test_report)
-        variables = Variables(self.test_variables)
-
-        cleaned_report = self.cleaner.remove_identifiers(report, variables)
+        cleaned_report = self.cleaner.remove_identifiers(Report(self.report_df), self.variables)
 
         assert 'name' not in cleaned_report.data.columns
         assert 'study_id' in cleaned_report.data.columns
@@ -72,7 +70,7 @@ class TestDataCleaner:
         assert 'study_id' in cleaned_report.raw_data.columns
 
     def test_clean_variables(self):
-        variables = self.cleaner.clean_variables(Variables(self.test_variables))
+        variables = self.cleaner.clean_variables(self.variables)
 
         assert isinstance(variables, Variables)
         assert 'empty_column' not in variables.data.columns
@@ -80,14 +78,14 @@ class TestDataCleaner:
         assert '<' not in variables.data['section_header'].values
 
     def test_clean_reports(self):
-        reports = self.cleaner.clean_reports(Report(self.test_report))
+        reports = self.cleaner.clean_reports(self.report)
 
         assert isinstance(reports, Report)
         assert 'consent_contact' in reports.data.columns
         assert not reports.data['consent_contact'].isna().all()
 
     def test_clean_variables_form_names(self):
-        cleaned_df = self.cleaner.clean_variables_form_names(self.test_variables, data_type='questionnaire')
+        cleaned_df = self.cleaner.clean_variables_form_names(self.variables_df)
 
         assert 'baseline_researcher_cb' not in cleaned_df['form_name'].values
         assert 'Baseline' in cleaned_df['form_name'].values
@@ -95,7 +93,7 @@ class TestDataCleaner:
         assert len(cleaned_df.columns) == len(cleaned_df.columns.unique())
 
     def test_clean_reports_form_names(self):
-        cleaned_df = self.cleaner.clean_reports_form_names(self.test_report, data_type='questionnaire')
+        cleaned_df = self.cleaner.clean_reports_form_names(self.report_df)
 
         assert 'baseline_researcher_cb' not in cleaned_df['redcap_event_name'].values
         assert 'baseline' in cleaned_df['redcap_event_name'].values
@@ -103,7 +101,7 @@ class TestDataCleaner:
         assert len(cleaned_df.columns) == len(cleaned_df.columns.unique())
 
     def test_filter_variables_columns(self):
-        filtered_df = self.cleaner.filter_variables_columns(self.test_variables)
+        filtered_df = self.cleaner.filter_variables_columns(self.variables_df)
 
         assert 'field_name' in filtered_df.columns
         assert 'empty_column' not in filtered_df.columns
@@ -119,3 +117,14 @@ class TestDataCleaner:
         assert '<' not in cleaned_df['section_header'].values
         assert '<' not in cleaned_df['field_label'].values
         assert 'No HTML' in cleaned_df['section_header'].values
+
+    def test_get_report_entries_table(self):
+        self.report.data = (self.report.data
+                            .assign(output_form='redcap_event_name')
+                            )
+        entries = self.cleaner.get_report_entries_table()
+
+        assert "form" in entries
+        assert "entries" in entries
+        assert "redcap_event_name" in entries
+        assert "3" in entries

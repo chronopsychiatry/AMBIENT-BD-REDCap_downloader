@@ -1,3 +1,13 @@
+"""
+String replacements for cleaning REDCap data exports.
+
+FIELD_NAMES: dict
+    Edit the report column names, as well as the variable field names.
+
+FORM_NAMES: dict
+    Edit the names of the REDCap modules, for filenames and event names in reports.
+"""
+
 FIELD_NAMES = {
     'study_id': 'participant_id',
     '_baseline1': '',
