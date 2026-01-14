@@ -48,8 +48,12 @@ FIELD_NAMES = {
 
     'module_668iz31tqbpitfqj': 'mood_anxiety',
     'module_bfef9dv80oupx78m': 'sleep_diary',
-    'module_ghitpgzwt9b55m44': 'id',
-    'module_zqiq9wq4l10gbkiz': 'end'
+    'module_ghitpgzwt9b55m44': 'participant_id',
+    'module_zqiq9wq4l10gbkiz': 'end_period',
+
+    'module_': '',
+    'field_': '',
+    r'_p\d+': '',  # Remove period suffixes (_p2, _p3, etc.)
 }
 
 FORM_NAMES = {
@@ -67,6 +71,8 @@ FORM_NAMES = {
 
     'module_668iz31tqbpitfqj': 'mood_anxiety',
     'module_bfef9dv80oupx78m': 'sleep_diary',
-    'module_ghitpgzwt9b55m44': 'id',
-    'module_zqiq9wq4l10gbkiz': 'end'
+    'module_ghitpgzwt9b55m44': 'participant_id',
+    'module_zqiq9wq4l10gbkiz': 'end_period',
+
+    'module_': ''
 }

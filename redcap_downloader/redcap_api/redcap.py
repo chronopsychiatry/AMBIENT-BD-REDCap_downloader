@@ -25,6 +25,8 @@ class REDCap:
         self.token = token
         self.base_url = 'https://redcap.usher.ed.ac.uk/api/'
         self.api_access = self.has_api_access()
+        self.project_title = self.get_project_title()
+        self.data_type = self.get_data_type()
 
     def has_api_access(self) -> bool:
         """
@@ -68,7 +70,26 @@ class REDCap:
             self._logger.error(f"Failed to fetch project title: {r.text}")
             raise Exception(f"HTTP Error: {r.status_code}")
         project_info = r.json()
-        return project_info.get('project_title', 'Unknown Project')
+        project_title = project_info.get('project_title', 'Unknown Project')
+        self._logger.info(f'Processing REDCap project: {project_title}')
+        return project_title
+
+    def get_data_type(self) -> str:
+        """
+        Determine the data type of the REDCap project based on its title.
+
+        Args:
+            None
+
+        Returns:
+            str: The data type ('questionnaire' or 'ema').
+        """
+        if 'EMA' in self.project_title:
+            return 'ema'
+        elif 'AmbientBD - ambient and passive collection' in self.project_title:
+            return 'questionnaire'
+        else:
+            return None
 
     def get_variables(self):
         """

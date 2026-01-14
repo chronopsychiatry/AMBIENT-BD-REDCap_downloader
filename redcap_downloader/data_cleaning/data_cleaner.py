@@ -5,7 +5,6 @@ import pandas as pd
 from tabulate import tabulate
 
 from ..redcap_api.dom import Variables, Report
-from ..config.properties import Properties
 from ..storage.path_resolver import PathResolver
 from .helpers import replace_strings, merge_duplicate_columns, fill_participant_ids
 from .replacements import FORM_NAMES, FIELD_NAMES
@@ -23,12 +22,19 @@ class DataCleaner:
         save_variables(): Cleans and saves variables.
         save_reports(): Cleans and saves reports.
     """
-    def __init__(self, paths: PathResolver, report: Report, variables: Variables, properties: Properties):
+    def __init__(self,
+                 paths: PathResolver,
+                 report: Report,
+                 variables: Variables,
+                 data_type: str,
+                 include_identifiers: bool = False):
         self._logger = logging.getLogger('DataCleaner')
         self.paths = paths
         self.report = report
         self.variables = variables
-        self.properties = properties
+        self.data_type = data_type
+        self.paths.data_type = data_type
+        self.include_identifiers = include_identifiers
 
     def save_cleaned_variables(self):
         """
@@ -60,7 +66,7 @@ class DataCleaner:
         Returns:
             None
         """
-        if not self.properties.include_identifiers:
+        if not self.include_identifiers:
             self.report = self.remove_identifiers(self.report, self.variables)
         self.report.save_raw_data(paths=self.paths)
 
@@ -107,7 +113,8 @@ class DataCleaner:
                        .query('form_name != "participant_information"')
                        .pipe(self.remove_html_tags)
                        .pipe(self.filter_variables_columns)
-                       .pipe(self.clean_variables_form_names, data_type=variables.data_type)
+                       .pipe(self.clean_variables_form_names, data_type=self.data_type)
+                       .drop_duplicates(ignore_index=True)
                        )
         variables.data = cleaned_var
         return variables
@@ -124,14 +131,15 @@ class DataCleaner:
         """
         cleaned_report = (report
                           .data
-                          .pipe(self.clean_reports_form_names, data_type=report.data_type)
+                          .pipe(self.clean_reports_form_names, data_type=self.data_type)
+                          .drop_duplicates(ignore_index=True)
                           )
-        if report.data_type == 'questionnaire':
+        if self.data_type == 'questionnaire':
             report.data = cleaned_report.query('redcap_event_name != "initial_contact"')
-        elif report.data_type == 'ema':
+        elif self.data_type == 'ema':
             report.data = (
                 cleaned_report
-                .pipe(fill_participant_ids)  # Here add a column with ema period (will require passing period nb or project title, prob as report attribute)
+                .pipe(fill_participant_ids)
                 .query('participant_id != "ABD999"')
                 )
         return report

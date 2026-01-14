@@ -4,6 +4,7 @@ from importlib.metadata import version
 from datetime import datetime
 
 from .config.properties import load_application_properties
+from .data_cleaning.helpers import get_ema_period_number
 from .storage.path_resolver import PathResolver
 from .redcap_api.redcap import REDCap
 from .redcap_api.dom import Report, Variables
@@ -33,32 +34,36 @@ def main():
     logger.info(f'Running redcap_downloader version {pkg_version}')
 
     paths = PathResolver(properties.download_folder)
+
     report = Report()
     variables = Variables()
+    data_type = None
 
     for token in properties.redcap_tokens:
         logger.debug(f'Trying to access REDCap with token {token}.')
         redcap = REDCap(token)
 
-        project_title = redcap.get_project_title()
-        logger.info(f'Processing REDCap project: {project_title}')
+        current_report = redcap.get_report()
+        current_variables = redcap.get_variables()
 
-        report.append(redcap.get_report())
-        variables.append(redcap.get_variables())
+        if redcap.data_type == 'ema':
+            ema_period = get_ema_period_number(redcap.project_title)
+            logger.debug(f'Extracted EMA period number: {ema_period} from project title.')
+            current_report.data.insert(1, 'EMA_period_number', ema_period)
 
-        previous_data_type = report.data_type
-        report.set_data_type(project_title)
-        variables.set_data_type(project_title)
-        logger.debug(f'Report data type: {report.data_type}')
+        report.append(current_report)
+        variables.append(current_variables)
 
-        if previous_data_type and previous_data_type != report.data_type:
+        if data_type and data_type != redcap.data_type:
             logger.warning('REDCap projects have different data types. Check your API tokens.')
+        logger.debug(f'Report data type: {redcap.data_type}')
+        data_type = redcap.data_type
 
         # subject_list = report.get_subjects(data_type)
         # logger.info(f'Downloaded reports for {len(subject_list)} subjects.')
         # logger.debug(f'Subject list: {subject_list}')
 
-    cleaner = DataCleaner(paths, report, variables, properties)
+    cleaner = DataCleaner(paths, report, variables, data_type)
 
     cleaner.save_cleaned_variables()
     cleaner.save_cleaned_reports()

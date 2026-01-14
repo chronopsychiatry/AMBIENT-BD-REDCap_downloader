@@ -1,4 +1,5 @@
 import pandas as pd
+import re
 
 
 def drop_empty_columns(df: pd.DataFrame) -> pd.DataFrame:
@@ -34,7 +35,7 @@ def merge_duplicate_columns(df: pd.DataFrame) -> pd.DataFrame:
 
 def replace_strings(series: pd.Series, replacements: dict) -> pd.Series:
     for old, new in replacements.items():
-        series = series.str.replace(old, new, regex=False)
+        series = series.str.replace(old, new, regex=True)
     return series
 
 
@@ -56,3 +57,20 @@ def fill_participant_ids(df):
                 .astype('int')
                 .apply(lambda x: f"ABD{x:03d}")
             ))
+
+
+def get_ema_period_number(project_title: str) -> int:
+    """
+    Extract the EMA period number from the project title.
+    The function will extract the number following "PERIOD " in the title.
+
+    Args:
+        project_title (str): The title of the REDCap project.
+    Returns:
+        int: The EMA period number.
+    """
+    match = re.search(r'PERIOD (\d+)', project_title)
+    if match:
+        return int(match.group(1))
+    else:
+        raise ValueError('Could not extract EMA period number from project title.')
