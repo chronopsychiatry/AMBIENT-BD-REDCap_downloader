@@ -29,6 +29,7 @@ class PathResolver:
         self.timestamp = datetime.now().strftime('%Y%m%d')
         self._main_dir = None
         self.set_main_dir(path)
+        self.data_type = None
 
     def set_main_dir(self, path: str | Path):
         path = Path(path)
@@ -82,5 +83,6 @@ class PathResolver:
     def get_variables_file(self, form_name: str) -> Path:
         return self.get_meta_dir() / f'{form_name}_variables_{self.timestamp}.csv'
 
-    def get_subject_questionnaire(self, subject_id: str, data_type: str, event_name: str) -> Path:
-        return self.get_subject_dir(subject_id) / f'{subject_id}_PROM-{data_type}{event_name}_{self.timestamp}.csv'
+    def get_subject_questionnaire(self, subject_id: str, event_name: str) -> Path:
+        data_str = 'EMA_' if self.data_type == 'ema' else ''
+        return self.get_subject_dir(subject_id) / f'{subject_id}_PROM-{data_str}{event_name}_{self.timestamp}.csv'

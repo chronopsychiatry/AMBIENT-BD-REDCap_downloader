@@ -2,33 +2,46 @@ from functools import reduce
 import logging
 import numpy as np
 import pandas as pd
+from tabulate import tabulate
 
-from ..redcap_api.redcap import REDCap, Variables, Report
+from ..redcap_api.dom import Variables, Report
 from ..storage.path_resolver import PathResolver
-from .helpers import replace_strings, merge_duplicate_columns
+from .helpers import replace_strings, merge_duplicate_columns, fill_participant_ids, fix_24h_sleeptimes
 from .replacements import FORM_NAMES, FIELD_NAMES
 
 
 class DataCleaner:
     """
-    Handles the cleaning and saving of questionnaire data from REDCap.
+    Handles the cleaning and saving of data from REDCap.
 
     Attributes:
-        redcap (REDCap): Instance of the REDCap API client.
         paths (PathResolver): Instance of PathResolver to manage file paths.
+        report (Report): Instance of Report containing report data.
+        variables (Variables): Instance of Variables containing variable data.
+        data_type (str): Type of data ('questionnaire' or 'ema').
+        include_identifiers (bool): Whether to include identifier fields in the reports.
 
     Methods:
-        save_questionnaire_variables(): Cleans and saves questionnaire variables.
-        save_questionnaire_reports(): Cleans and saves questionnaire reports.
+        save_cleaned_variables(): Cleans and saves variables.
+        save_cleaned_reports(): Cleans and saves reports.
     """
-    def __init__(self, redcap: REDCap, paths: PathResolver):
+    def __init__(self,
+                 paths: PathResolver,
+                 report: Report,
+                 variables: Variables,
+                 data_type: str,
+                 include_identifiers: bool = False):
         self._logger = logging.getLogger('DataCleaner')
-        self.redcap = redcap
         self.paths = paths
+        self.report = report
+        self.variables = variables
+        self.data_type = data_type
+        self.paths.data_type = data_type
+        self.include_identifiers = include_identifiers
 
-    def save_questionnaire_variables(self):
+    def save_cleaned_variables(self):
         """
-        Clean-up and save questionnaire variables from REDCap.
+        Clean-up and save variables from REDCap.
 
         Args:
             None
@@ -37,16 +50,18 @@ class DataCleaner:
             None
 
         """
-        variables = self.redcap.get_questionnaire_variables()
-        variables.save_raw_data(paths=self.paths)
+        self.variables.save_raw_data(paths=self.paths)
 
-        variables = self.clean_variables(variables)
-        variables.save_cleaned_data(paths=self.paths, by=['output_form'], remove_empty_columns=True)
-        self._logger.info(f'Saved cleaned questionnaire variables to {self.paths.get_meta_dir()}.')
+        self.variables = self.clean_variables(self.variables)
 
-    def save_questionnaire_reports(self):
+        self._logger.info(f'Total number of variables: {len(self.variables.data)}')
+
+        self.variables.save_cleaned_data(paths=self.paths, by=['output_form'], remove_empty_columns=True)
+        self._logger.info(f'Saved cleaned variables to {self.paths.get_meta_dir()}.')
+
+    def save_cleaned_reports(self):
         """
-        Clean-up and save questionnaire reports from REDCap.
+        Clean-up and save reports from REDCap.
 
         Args:
             None
@@ -54,36 +69,37 @@ class DataCleaner:
         Returns:
             None
         """
-        reports = self.redcap.get_questionnaire_report()
-        if not self.redcap.properties.include_identifiers:
-            variables = self.redcap.get_questionnaire_variables()
-            reports = self.remove_identifiers(reports, variables)
-        reports.save_raw_data(paths=self.paths)
+        if not self.include_identifiers:
+            self.report = self.remove_identifiers(self.report, self.variables)
+        self.report.save_raw_data(paths=self.paths)
 
-        reports = self.clean_reports(reports)
-        reports.save_cleaned_data(self.paths, by=['participant_id', 'output_form'], remove_empty_columns=True)
-        self._logger.info(f'Saved cleaned questionnaire reports to {self.paths.get_reports_dir()}.')
+        self.report = self.clean_reports(self.report)
 
-    def remove_identifiers(self, reports: Report, variables: Variables) -> Report:
+        self._logger.info(f'Total number of report entries:\n{self.get_report_entries_table()}')
+
+        self.report.save_cleaned_data(self.paths, by=['participant_id', 'output_form'], remove_empty_columns=True)
+        self._logger.info(f'Saved cleaned reports to {self.paths.get_reports_dir()}.')
+
+    def remove_identifiers(self, report: Report, variables: Variables) -> Report:
         """
         Remove identifier fields from the reports DataFrame.
 
         Args:
-            reports (Report): Report instance.
+            report (Report): Report instance.
             variables (Variables): Variables instance.
         Returns:
             Report: Report instance with identifier fields removed.
         """
         identifier_fields = (variables
-                             .data
+                             .raw_data
                              .query('identifier == "y"')
                              ['field_name']
                              .tolist()
                              )
         self._logger.info(f'Removing identifier fields: {identifier_fields}')
-        reports.data = reports.data.drop(columns=identifier_fields, axis='columns', errors='ignore')
-        reports.raw_data = reports.raw_data.drop(columns=identifier_fields, axis='columns', errors='ignore')
-        return reports
+        report.data = report.data.drop(columns=identifier_fields, axis='columns', errors='ignore')
+        report.raw_data = report.raw_data.drop(columns=identifier_fields, axis='columns', errors='ignore')
+        return report
 
     def clean_variables(self, variables: Variables) -> Variables:
         """
@@ -93,51 +109,57 @@ class DataCleaner:
             variables (Variables): Variables instance containing raw data.
 
         Returns:
-            Variables: Variables instance with cleaned data added.
+            variables: Variables instance with cleaned data added.
         """
         cleaned_var = (variables
                        .data
                        .query('form_name != "participant_information"')
                        .pipe(self.remove_html_tags)
                        .pipe(self.filter_variables_columns)
-                       .pipe(self.clean_variables_form_names, data_type=variables.data_type)
+                       .pipe(self.clean_variables_form_names)
+                       .drop_duplicates(ignore_index=True)
                        )
         variables.data = cleaned_var
         return variables
 
-    def clean_reports(self, reports: Report) -> Report:
+    def clean_reports(self, report: Report) -> Report:
         """
         Clean-up the reports DataFrame.
 
         Args:
-            reports (Report): Report instance containing raw data.
+            report (Report): Report instance containing raw data.
 
         Returns:
-            Report: Report instance with cleaned data added.
+            report: Report instance with cleaned data.
         """
-        cleaned_reports = (reports
-                           .data
-                           .pipe(self.clean_reports_form_names, data_type=reports.data_type)
-                           )
-        if reports.data_type == 'questionnaire':
-            reports.data = cleaned_reports.query('redcap_event_name != "initial_contact"')
-        elif reports.data_type == 'ema':
-            reports.data = (
-                cleaned_reports
-                .assign(
-                    participant_id=lambda df: df['participant_id'].ffill().astype('int').apply(lambda x: f"ABD{x:03d}")
-                )
+        cleaned_report = (report
+                          .data
+                          .pipe(self.clean_reports_form_names)
+                          .drop_duplicates(ignore_index=True)
+                          )
+        if self.data_type == 'questionnaire':
+            report.data = (
+                cleaned_report
+                .loc[cleaned_report['participant_id'].str.contains('ABD')]
+                .query('redcap_event_name != "initial_contact" and\
+                            redcap_event_name != "scheduling_emails"'
+                       )
+            )
+        elif self.data_type == 'ema':
+            report.data = (
+                cleaned_report
+                .pipe(fill_participant_ids)
                 .query('participant_id != "ABD999"')
+                .pipe(fix_24h_sleeptimes, self._logger)
                 )
-        return reports
+        return report
 
-    def clean_variables_form_names(self, df: pd.DataFrame, data_type: str) -> pd.DataFrame:
+    def clean_variables_form_names(self, df: pd.DataFrame) -> pd.DataFrame:
         """
         Replace form names by human-readable names and merge researcher and participant forms.
 
         Args:
             df (pd.DataFrame): DataFrame containing variable data.
-            data_type (str): The type of data ('questionnaire' or 'ema').
 
         Returns:
             pd.DataFrame: DataFrame with cleaned form names.
@@ -147,29 +169,28 @@ class DataCleaner:
                       form_name=lambda df: replace_strings(df.form_name, FORM_NAMES),
                       field_name=lambda df: replace_strings(df.field_name, FIELD_NAMES)
                       ))
-        if data_type == 'questionnaire':
+        if self.data_type == 'questionnaire':
             df = df.assign(output_form=lambda df: np.where(df.form_name == 'Screening', 'Scre', 'Ques'))
-        elif data_type == 'ema':
+        elif self.data_type == 'ema':
             df = df.assign(output_form=lambda df: df.form_name)
         return (df.pipe(merge_duplicate_columns))
 
-    def clean_reports_form_names(self, df: pd.DataFrame, data_type: str) -> pd.DataFrame:
+    def clean_reports_form_names(self, df: pd.DataFrame) -> pd.DataFrame:
         """
         Clean-up the form and column names of the reports DataFrame.
 
         Args:
             df (pd.DataFrame): DataFrame containing report data.
-            data_type (str): The type of data ('questionnaire' or 'ema').
 
         Returns:
             pd.DataFrame: DataFrame with cleaned form and column names.
         """
-        if data_type == 'questionnaire':
+        if self.data_type == 'questionnaire':
             df = (df
                   .assign(redcap_event_name=lambda df: replace_strings(df.redcap_event_name, {'_arm_1': ''}),
                           output_form=lambda df: np.where(df.redcap_event_name == 'screening', 'Scre', 'Ques')
                           ))
-        elif data_type == 'ema':
+        elif self.data_type == 'ema':
             df = (df
                   .assign(redcap_repeat_instrument=lambda df: replace_strings(df.redcap_repeat_instrument, FORM_NAMES),
                           output_form=lambda df: df.redcap_repeat_instrument
@@ -209,3 +230,23 @@ class DataCleaner:
             **df.select_dtypes(include=['object'])
             .replace(to_replace=r'<[^>]+>', value='', regex=True)
         )
+
+    def get_report_entries_table(self) -> str:
+        """
+        Generate a formatted table of report entries per form.
+
+        Args:
+            None
+        Returns:
+            str: Formatted table as a string.
+        """
+        return tabulate(self.report.data
+                        .rename(columns={'output_form': 'form'})
+                        .groupby('form')
+                        .size()
+                        .sort_values(ascending=False)
+                        .to_frame()
+                        .rename(columns={0: 'entries'}),
+                        headers='keys',
+                        tablefmt='psql'
+                        )

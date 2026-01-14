@@ -1,3 +1,13 @@
+"""
+String replacements for cleaning REDCap data exports.
+
+FIELD_NAMES: dict
+    Edit the report column names, as well as the variable field names.
+
+FORM_NAMES: dict
+    Edit the names of the REDCap modules, for filenames and event names in reports.
+"""
+
 FIELD_NAMES = {
     'study_id': 'participant_id',
     '_baseline1': '',
@@ -48,8 +58,12 @@ FIELD_NAMES = {
 
     'module_668iz31tqbpitfqj': 'mood_anxiety',
     'module_bfef9dv80oupx78m': 'sleep_diary',
-    'module_ghitpgzwt9b55m44': 'id',
-    'module_zqiq9wq4l10gbkiz': 'end'
+    'module_ghitpgzwt9b55m44': 'participant_id',
+    'module_zqiq9wq4l10gbkiz': 'end_period',
+
+    'module_': '',
+    'field_': '',
+    r'_p\d+': '',  # Remove period suffixes (_p2, _p3, etc.)
 }
 
 FORM_NAMES = {
@@ -67,6 +81,8 @@ FORM_NAMES = {
 
     'module_668iz31tqbpitfqj': 'mood_anxiety',
     'module_bfef9dv80oupx78m': 'sleep_diary',
-    'module_ghitpgzwt9b55m44': 'id',
-    'module_zqiq9wq4l10gbkiz': 'end'
+    'module_ghitpgzwt9b55m44': 'participant_id',
+    'module_zqiq9wq4l10gbkiz': 'end_period',
+
+    'module_': ''
 }

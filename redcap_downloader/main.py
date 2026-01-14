@@ -4,8 +4,10 @@ from importlib.metadata import version
 from datetime import datetime
 
 from .config.properties import load_application_properties
+from .data_cleaning.helpers import get_ema_period_number
 from .storage.path_resolver import PathResolver
 from .redcap_api.redcap import REDCap
+from .redcap_api.dom import Report, Variables
 from .data_cleaning.data_cleaner import DataCleaner
 
 
@@ -33,12 +35,34 @@ def main():
 
     paths = PathResolver(properties.download_folder)
 
-    redcap = REDCap(properties)
+    report = Report()
+    variables = Variables()
+    data_type = None
 
-    cleaner = DataCleaner(redcap, paths)
+    for token in properties.redcap_tokens:
+        logger.debug(f'Trying to access REDCap with token {token}.')
+        redcap = REDCap(token)
 
-    cleaner.save_questionnaire_variables()
-    cleaner.save_questionnaire_reports()
+        current_report = redcap.get_report()
+        current_variables = redcap.get_variables()
+
+        if redcap.data_type == 'ema':
+            ema_period = get_ema_period_number(redcap.project_title)
+            logger.debug(f'Extracted EMA period number: {ema_period} from project title.')
+            current_report.data.insert(1, 'EMA_period_number', ema_period)
+
+        report.append(current_report)
+        variables.append(current_variables)
+
+        if data_type and data_type != redcap.data_type:
+            logger.warning('REDCap projects have different data types. Check your API tokens.')
+        logger.debug(f'Report data type: {redcap.data_type}')
+        data_type = redcap.data_type
+
+    cleaner = DataCleaner(paths, report, variables, data_type)
+
+    cleaner.save_cleaned_variables()
+    cleaner.save_cleaned_reports()
 
 
 if __name__ == '__main__':
