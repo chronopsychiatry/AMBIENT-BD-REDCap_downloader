@@ -1,6 +1,8 @@
 import pandas as pd
 import re
 
+from .replacements import FIELD_NAMES
+
 
 def drop_empty_columns(df: pd.DataFrame) -> pd.DataFrame:
     """
@@ -33,6 +35,19 @@ def merge_duplicate_columns(df: pd.DataFrame) -> pd.DataFrame:
             )
 
 
+def replace_column_name(col):
+    """
+    Replace substrings in a (single) column name based on FIELD_NAMES dictionary.
+    Args:
+        col (str): Column name to be processed.
+    Returns:
+        str: Column name with substrings replaced.
+    """
+    for old, new in FIELD_NAMES.items():
+        col = re.sub(old, new, col)
+    return col
+
+
 def replace_strings(series: pd.Series, replacements: dict) -> pd.Series:
     """
     Replace substrings in a pandas Series based on a replacements dictionary.
@@ -57,15 +72,19 @@ def fill_participant_ids(df):
     Returns:
         pd.DataFrame: DataFrame with participant IDs filled and formatted.
     """
-    return (df
-            .assign(
-                participant_id=lambda df: df
-                ['participant_id']
-                .infer_objects(copy=False)
-                .ffill()
-                .astype('int')
-                .apply(lambda x: f"ABD{x:03d}")
-            ))
+    # We do not want to fill IDs across EMA periods, so we do it by EMA period
+    def fill_and_format(s):
+        return (
+            s.infer_objects(copy=False)
+             .ffill()
+             .astype(int)
+             .apply(lambda x: f"ABD{x:03d}")
+        )
+    df['participant_id'] = (
+        df.groupby('EMA_period_number')['participant_id']
+          .transform(fill_and_format)
+    )
+    return df
 
 
 def get_ema_period_number(project_title: str) -> int:

@@ -3,6 +3,7 @@ import logging
 
 from redcap_downloader.data_cleaning.helpers import (drop_empty_columns,
                                                      merge_duplicate_columns,
+                                                     replace_column_name,
                                                      replace_strings,
                                                      fill_participant_ids,
                                                      get_ema_period_number,
@@ -37,6 +38,12 @@ class TestCleaningHelpers:
         })
         pd.testing.assert_frame_equal(result, expected)
 
+    def test_replace_column_name(self):
+        col_name = 'field_response_time_ms_p4'
+        result = replace_column_name(col_name)
+        expected = 'response_time_ms'
+        assert result == expected
+
     def test_replace_strings(self):
         series = pd.Series(['apple', 'banana', 'cherry'])
         replacements = {'apple': 'orange', 'banana': 'grape'}
@@ -47,11 +54,13 @@ class TestCleaningHelpers:
     def test_fill_participant_ids(self):
         df = pd.DataFrame({
             'participant_id': [2, None, 4, None, None],
+            'EMA_period_number': [1, 1, 2, 2, 2],
             'data': [10, 20, 30, 40, 50]
         })
         result = fill_participant_ids(df)
         expected = pd.DataFrame({
             'participant_id': ['ABD002', 'ABD002', 'ABD004', 'ABD004', 'ABD004'],
+            'EMA_period_number': [1, 1, 2, 2, 2],
             'data': [10, 20, 30, 40, 50]
         })
         pd.testing.assert_frame_equal(result, expected)

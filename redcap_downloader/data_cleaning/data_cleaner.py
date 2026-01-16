@@ -1,4 +1,3 @@
-from functools import reduce
 import logging
 import numpy as np
 import pandas as pd
@@ -6,7 +5,8 @@ from tabulate import tabulate
 
 from ..redcap_api.dom import Variables, Report
 from ..storage.path_resolver import PathResolver
-from .helpers import replace_strings, merge_duplicate_columns, fill_participant_ids, fix_24h_sleeptimes
+from .helpers import (replace_strings, replace_column_name, merge_duplicate_columns, fill_participant_ids,
+                      fix_24h_sleeptimes)
 from .replacements import FORM_NAMES, FIELD_NAMES
 
 
@@ -146,12 +146,13 @@ class DataCleaner:
                        )
             )
         elif self.data_type == 'ema':
+            cleaned_report = fill_participant_ids(cleaned_report)
             report.data = (
                 cleaned_report
-                .pipe(fill_participant_ids)
-                .query('participant_id != "ABD999"')
+                [~cleaned_report['participant_id'].str.match(r'^ABD9')]  # ABD9xx are test records
                 .pipe(self.move_mood_anxiety_ema_p1)
                 .pipe(fix_24h_sleeptimes, self._logger)
+                .query('redcap_repeat_instrument != "end_period"')
                 )
         return report
 
@@ -198,9 +199,7 @@ class DataCleaner:
                           )
                   )
         return (df
-                .rename(columns=lambda df: (
-                    reduce(lambda s, kv: s.replace(kv[0], kv[1]), FIELD_NAMES.items(), df)
-                ))
+                .rename(columns=replace_column_name)
                 .pipe(merge_duplicate_columns)
                 )
 
