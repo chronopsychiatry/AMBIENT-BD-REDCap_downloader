@@ -150,6 +150,7 @@ class DataCleaner:
                 cleaned_report
                 .pipe(fill_participant_ids)
                 .query('participant_id != "ABD999"')
+                .pipe(self.move_mood_anxiety_ema_p1)
                 .pipe(fix_24h_sleeptimes, self._logger)
                 )
         return report
@@ -250,3 +251,40 @@ class DataCleaner:
                         headers='keys',
                         tablefmt='psql'
                         )
+
+    def move_mood_anxiety_ema_p1(self, df: pd.DataFrame) -> pd.DataFrame:
+        """
+        Move mood and anxiety prompts from the EMA period 1 "sleep_diary" form to the "mood_anxiety" form.
+
+        Args:
+            df (pd.DataFrame): DataFrame containing report data.
+
+        Returns:
+            pd.DataFrame: DataFrame with all mood and anxiety prompts moved to the "mood_anxiety" form.
+        """
+        mask = (df['output_form'] == 'sleep_diary') & (df['EMA_period_number'] == 1)
+        diary_df = df.loc[mask, :]
+        non_diary_df = df.loc[~mask, :]
+
+        diary_stay = diary_df.copy()
+        diary_move = diary_df.copy()
+        cols_to_keep = ['record_id', 'EMA_period_number', 'participant_id', 'redcap_repeat_instrument',
+                        'redcap_repeat_instance', 'response_time_diary_ms', 'response_timestamp_diary',
+                        'diary_anxiety', 'diary_mood', 'output_form']
+        diary_move.loc[:, ~diary_move.columns.isin(cols_to_keep)] = np.nan
+        diary_move = (
+            diary_move
+            .assign(output_form='mood_anxiety',
+                    response_time_ms=lambda df: df['response_time_diary_ms'],
+                    response_timestamp=lambda df: df['response_timestamp_diary'],
+                    current_anxiety=lambda df: df['diary_anxiety'],
+                    current_mood=lambda df: df['diary_mood']
+                    )
+            .drop(['response_time_diary_ms', 'response_timestamp_diary'], axis='columns')
+            )
+
+        return (
+            pd.concat([non_diary_df, diary_stay, diary_move], ignore_index=True)
+            .drop(['diary_anxiety', 'diary_mood'], axis='columns')
+            .sort_values(by=['EMA_period_number', 'participant_id', 'output_form', 'response_time_ms'])
+            )

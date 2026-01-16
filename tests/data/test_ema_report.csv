@@ -1,0 +1,4 @@
+participant_id,output_form,EMA_period_number,diary_anxiety,diary_mood,response_time_diary_ms,response_timestamp_diary,response_time_ms,response_timestamp,current_anxiety
+ABD001,mood_anxiety,1,,,,,1766335068146,2025-12-21T16:37:48+00:00,2
+ABD001,sleep_diary,1,1,5,1766335068146,2025-12-21T16:37:48+00:00,,,
+ABD001,sleep_diary,1,0,6,1766335068146,2025-12-21T16:37:48+00:00,,,

@@ -12,14 +12,23 @@ class TestDataCleaner:
     test_dir = tempfile.TemporaryDirectory()
     paths = PathResolver(test_dir.name)
     report_df = pd.read_csv('./tests/data/test_report.csv')
+    ema_report_df = pd.read_csv('./tests/data/test_ema_report.csv')
     variables_df = pd.read_csv('./tests/data/test_variables.csv')
     report = Report(report_df)
+    ema_report = Report(ema_report_df)
     variables = Variables(variables_df)
     cleaner = DataCleaner(
         paths=paths,
         report=report,
         variables=variables,
         data_type='questionnaire',
+        include_identifiers=False
+    )
+    ema_cleaner = DataCleaner(
+        paths=paths,
+        report=ema_report,
+        variables=variables,
+        data_type='ema',
         include_identifiers=False
     )
 
@@ -128,3 +137,12 @@ class TestDataCleaner:
         assert "entries" in entries
         assert "redcap_event_name" in entries
         assert "3" in entries
+
+    def test_move_mood_anxiety_ema_p1(self):
+        cleaned_report = self.ema_cleaner.move_mood_anxiety_ema_p1(self.ema_report.data)
+
+        for _, r in cleaned_report.groupby('output_form'):
+            if r.output_form.iloc[0] == 'mood_anxiety':
+                assert not any(r['current_anxiety'].isna())
+            elif r.output_form.iloc[0] == 'sleep_diary':
+                assert ('diary_mood' not in r.columns) and ('diary_anxiety' not in r.columns)
