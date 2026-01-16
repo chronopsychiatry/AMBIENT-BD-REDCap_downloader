@@ -51,6 +51,11 @@ class TestPathsResolver():
         assert self.resolver.get_subject_dir(subject_id) == expected_path
         assert expected_path.exists()
 
+    def test_get_all_subjects_dir(self):
+        expected_path = self.test_dir / 'reports' / 'All_participants'
+        assert self.resolver.get_all_subjects_dir() == expected_path
+        assert expected_path.exists()
+
     def test_get_raw_variables_file(self):
         expected_path = self.test_dir / 'raw' / f'Variables_raw_{self.resolver.timestamp}.csv'
         assert self.resolver.get_raw_variables_file() == expected_path
@@ -74,6 +79,17 @@ class TestPathsResolver():
             / f'{subject_id}_PROM-{event_name}_{self.resolver.timestamp}.csv'
         )
         assert self.resolver.get_subject_questionnaire(subject_id, event_name=event_name) == expected_path
+        assert not expected_path.exists()
+
+    def test_get_all_subjects_file(self):
+        event_name = 'event_456'
+        expected_path = (
+            self.test_dir
+            / 'reports'
+            / 'All_participants'
+            / f'All_PROM-{event_name}_{self.resolver.timestamp}.csv'
+        )
+        assert self.resolver.get_all_subjects_file(event_name=event_name) == expected_path
         assert not expected_path.exists()
 
     def test_tearDown(self):
