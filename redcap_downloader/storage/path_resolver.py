@@ -18,10 +18,12 @@ class PathResolver:
         get_meta_dir(): Returns the path for metadata storage.
         get_reports_dir(): Returns the path for reports storage.
         get_subject_dir(subject_id): Returns the path for a specific subject's data.
+        get_all_subjects_dir(): Returns the path for all subjects' data.
         get_raw_variables_file(): Returns the path for raw variables data.
         get_raw_report_file(): Returns the path for raw report data.
         get_variables_file(form_name): Returns the path for a specific form's variables data.
         get_subject_questionnaire(subject_id, event_name): Returns the path for a subject's questionnaire data.
+        get_all_subjects_file(event_name): Returns the file path for all subjects' data.
     """
     def __init__(self, path: str | Path = '../downloaded_data'):
         path = Path(path)
@@ -74,6 +76,12 @@ class PathResolver:
             subject_dir.mkdir(parents=True)
         return subject_dir
 
+    def get_all_subjects_dir(self) -> Path:
+        all_subjects_dir = self.get_reports_dir() / 'All_participants'
+        if not all_subjects_dir.exists():
+            all_subjects_dir.mkdir(parents=True)
+        return all_subjects_dir
+
     def get_raw_variables_file(self) -> Path:
         return self.get_raw_dir() / f'Variables_raw_{self.timestamp}.csv'
 
@@ -86,3 +94,7 @@ class PathResolver:
     def get_subject_questionnaire(self, subject_id: str, event_name: str) -> Path:
         data_str = 'EMA_' if self.data_type == 'ema' else ''
         return self.get_subject_dir(subject_id) / f'{subject_id}_PROM-{data_str}{event_name}_{self.timestamp}.csv'
+
+    def get_all_subjects_file(self, event_name: str) -> Path:
+        data_str = 'EMA_' if self.data_type == 'ema' else ''
+        return self.get_all_subjects_dir() / f'All_PROM-{data_str}{event_name}_{self.timestamp}.csv'

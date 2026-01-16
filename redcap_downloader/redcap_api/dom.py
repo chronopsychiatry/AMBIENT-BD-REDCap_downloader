@@ -75,6 +75,13 @@ class Report(DataMixin):
         Returns:
             None
         """
+        df_list = [self.data] if by == '' else self.split(['output_form'])
+        if remove_empty_columns:
+            df_list = [drop_empty_columns(df) for df in df_list]
+        for df in df_list:
+            all_subjects_path = paths.get_all_subjects_file(event_name=df.output_form.iloc[0])
+            df.drop(columns=['output_form'], axis='columns').to_csv(all_subjects_path, index=False)
+
         df_list = [self.data] if by == '' else self.split(by)
         if remove_empty_columns:
             df_list = [drop_empty_columns(df) for df in df_list]
