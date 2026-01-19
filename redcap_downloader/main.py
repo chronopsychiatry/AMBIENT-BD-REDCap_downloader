@@ -55,7 +55,7 @@ def main():
         variables.append(current_variables)
 
         if data_type and data_type != redcap.data_type:
-            logger.warning('REDCap projects have different data types. Check your API tokens.')
+            logger.error('REDCap projects have different data types. Check your API tokens.')
         logger.debug(f'Report data type: {redcap.data_type}')
         data_type = redcap.data_type
 
