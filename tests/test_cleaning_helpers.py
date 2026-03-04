@@ -80,10 +80,7 @@ class TestCleaningHelpers:
         logger = logging.getLogger('test_logger')
         result = fix_24h_sleeptimes(df, logger)
         expected = pd.DataFrame({
-            'try_sleep_time': ['23:30:00',
-                               pd.to_datetime('22:15:00', format='%H:%M:%S').time(),
-                               pd.to_datetime('23:00:00', format='%H:%M:%S').time(),
-                               '22:45:00'],
+            'try_sleep_time': ['23:30:00', '22:15:00', '23:00:00', '22:45:00'],
             'participant_id': ['ABD001', 'ABD001', 'ABD003', 'ABD004'],
             'other_data': [1, 2, 3, 4]
         })

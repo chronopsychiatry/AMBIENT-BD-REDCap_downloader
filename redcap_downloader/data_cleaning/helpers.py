@@ -30,7 +30,7 @@ def merge_duplicate_columns(df: pd.DataFrame) -> pd.DataFrame:
     return (df
             .T
             .groupby(df.columns, sort=False)
-            .apply(lambda x: x.infer_objects(copy=False).bfill().iloc[0])
+            .apply(lambda x: x.infer_objects().bfill().iloc[0])
             .T
             )
 
@@ -75,7 +75,7 @@ def fill_participant_ids(df):
     # We do not want to fill IDs across EMA periods, so we do it by EMA period
     def fill_and_format(s):
         return (
-            s.infer_objects(copy=False)
+            s.infer_objects()
              .ffill()
              .astype(int)
              .apply(lambda x: f"ABD{x:03d}")
@@ -123,8 +123,8 @@ def fix_24h_sleeptimes(df: pd.DataFrame, logger) -> pd.DataFrame:
         logger.warning(f'Correcting sleeptimes for participants: {flagged_participants}')
         df.loc[flags.index, 'try_sleep_time'] = (
             pd.to_datetime(
-                df.loc[flags.index, 'try_sleep_time'],
+                flags['try_sleep_time'],
                 format='%H:%M:%S'
             ) + pd.Timedelta(hours=12)
-        ).dt.time
+        ).dt.time.astype('string')
     return df

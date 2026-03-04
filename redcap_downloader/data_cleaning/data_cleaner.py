@@ -227,7 +227,7 @@ class DataCleaner:
             pd.DataFrame: DataFrame with HTML tags removed from string cells.
         """
         return df.copy().assign(
-            **df.select_dtypes(include=['object'])
+            **df.select_dtypes(include=['str'])
             .replace(to_replace=r'<[^>]+>', value='', regex=True)
         )
 
