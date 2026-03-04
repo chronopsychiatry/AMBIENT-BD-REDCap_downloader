@@ -226,10 +226,13 @@ class DataCleaner:
         Returns:
             pd.DataFrame: DataFrame with HTML tags removed from string cells.
         """
-        return df.copy().assign(
-            **df.select_dtypes(include=['str'])
-            .replace(to_replace=r'<[^>]+>', value='', regex=True)
-        )
+        with pd.option_context("future.infer_string", True):
+            output_df = (
+                df.copy().assign(
+                **df.select_dtypes(include=['str'])
+                .replace(to_replace=r'<[^>]+>', value='', regex=True)
+            ))
+        return output_df
 
     def get_report_entries_table(self) -> str:
         """
