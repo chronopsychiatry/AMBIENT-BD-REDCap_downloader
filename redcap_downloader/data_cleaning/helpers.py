@@ -62,28 +62,28 @@ def replace_strings(series: pd.Series, replacements: dict) -> pd.Series:
     return series
 
 
-def fill_participant_ids(df):
+def fill_participant_ids(df: pd.DataFrame) -> pd.DataFrame:
     """
-    Fill missing participant IDs in the DataFrame and format them as ABD001.
-    To be used with EMA data.
+    For each (EMA_period_number, record_id), set participant_id to the first
+    non-null value observed in that group, then format as ABD###.
 
     Args:
         df (pd.DataFrame): DataFrame to be processed.
     Returns:
-        pd.DataFrame: DataFrame with participant IDs filled and formatted.
+        pd.DataFrame: DataFrame with participant IDs filled and formatted
     """
-    # We do not want to fill IDs across EMA periods, so we do it by EMA period
-    def fill_and_format(s):
-        return (
-            s.infer_objects()
-             .ffill()
-             .astype(int)
-             .apply(lambda x: f"ABD{x:03d}")
-        )
-    df['participant_id'] = (
-        df.groupby('EMA_period_number')['participant_id']
-          .transform(fill_and_format)
+
+    def first_non_null(s: pd.Series):
+        s2 = s.dropna()
+        return s2.iloc[0] if not s2.empty else pd.NA
+
+    df["participant_id"] = (
+        df.groupby(["EMA_period_number", "record_id"])["participant_id"]
+          .transform(first_non_null)
+          .infer_objects()
+          .pipe(lambda s: s.where(s.isna(), s.astype(int).map(lambda x: f"ABD{x:03d}")))
     )
+
     return df
 
 

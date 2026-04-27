@@ -53,15 +53,17 @@ class TestCleaningHelpers:
 
     def test_fill_participant_ids(self):
         df = pd.DataFrame({
-            'participant_id': [2, None, 4, None, None],
-            'EMA_period_number': [1, 1, 2, 2, 2],
-            'data': [10, 20, 30, 40, 50]
+            'participant_id': [None, 2, 4, None, 5, None],
+            'record_id': [1, 1, 2, 2, 3, 3],
+            'EMA_period_number': [1, 1, 2, 2, 2, 2],
+            'data': [10, 20, 30, 40, 50, 60]
         })
         result = fill_participant_ids(df)
         expected = pd.DataFrame({
-            'participant_id': ['ABD002', 'ABD002', 'ABD004', 'ABD004', 'ABD004'],
-            'EMA_period_number': [1, 1, 2, 2, 2],
-            'data': [10, 20, 30, 40, 50]
+            'participant_id': ['ABD002', 'ABD002', 'ABD004', 'ABD004', 'ABD005', 'ABD005'],
+            'record_id': [1, 1, 2, 2, 3, 3],
+            'EMA_period_number': [1, 1, 2, 2, 2, 2],
+            'data': [10, 20, 30, 40, 50, 60]
         })
         pd.testing.assert_frame_equal(result, expected)
 

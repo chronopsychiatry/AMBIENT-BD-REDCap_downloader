@@ -6,7 +6,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "redcap_downloader"
-version = "0.3.2"
+version = "0.3.3"
 description = "Download, clean-up and organise data from REDCap"
 readme = { content-type = "text/markdown", file = "README.md" }
 requires-python = ">=3.10"
