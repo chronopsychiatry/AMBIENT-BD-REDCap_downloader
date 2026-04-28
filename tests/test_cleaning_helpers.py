@@ -65,6 +65,8 @@ class TestCleaningHelpers:
             'EMA_period_number': [1, 1, 2, 2, 2, 2],
             'data': [10, 20, 30, 40, 50, 60]
         })
+        result["participant_id"] = result["participant_id"].astype("string")
+        expected["participant_id"] = expected["participant_id"].astype("string")
         pd.testing.assert_frame_equal(result, expected)
 
     def test_get_ema_period_number(self):
